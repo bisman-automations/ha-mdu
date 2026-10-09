@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-09
+
+### Fixed
+- The portal can answer the sign-in form with an empty page. The integration
+  now does what a browser would: follows a `Refresh` or `Location` header if
+  there is one, otherwise loads the next page, and decides from there whether
+  sign-in worked, needs a security code, or was refused.
+
+### Changed
+- If sign-in still can't be understood, the log includes the response
+  headers (cookie names only, never values) and the follow-up page.
+
 ## [0.1.3] - 2026-10-09
 
 ### Changed

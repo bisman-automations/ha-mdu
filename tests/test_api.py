@@ -187,9 +187,60 @@ async def test_unexpected_page_is_not_bad_password(client: MDUClient) -> None:
     with aioresponses() as mocked:
         _login_page(mocked)
         mocked.post(f"{BASE}/login", body="<html><body>Maintenance</body></html>", content_type="text/html")
-        _not_signed_in(mocked)
-        with pytest.raises(MDUConnectionError):
+        mocked.get(f"{BASE}/", body="<html><body>Maintenance</body></html>", content_type="text/html")
+        for path in ("/account/load-accounts-list", "/mfa/enabled"):
+            mocked.get(f"{BASE}{path}", status=302, headers={"Location": f"{BASE}/login"}, repeat=True)
+        with pytest.raises(MDUConnectionError) as err:
             await client.login()
+    assert "Maintenance" in str(err.value)
+
+
+def _empty_answer(mocked: aioresponses, **headers: str) -> None:
+    """The sign-in post answers 200 with an empty body."""
+    mocked.post(f"{BASE}/login", status=200, body="", headers=headers)
+
+
+async def test_empty_answer_with_refresh_leads_to_code_page(client: MDUClient) -> None:
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        _empty_answer(mocked, Refresh="0; url=/mfa")
+        mocked.get(f"{BASE}/account/load-accounts-list", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/mfa/enabled", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/mfa", body=load_fixture("mfa_page.html"), content_type="text/html")
+        with pytest.raises(MDUMfaRequired):
+            await client.login()
+
+
+async def test_empty_answer_then_signed_in(client: MDUClient) -> None:
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        _empty_answer(mocked)
+        mocked.get(f"{BASE}/account/load-accounts-list", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/mfa/enabled", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/", status=302, headers={"Location": f"{BASE}/payment-center"})
+        mocked.get(f"{BASE}/payment-center", body=load_fixture("app_page.html"), content_type="text/html")
+        mocked.get(f"{BASE}/account/load-accounts-list", payload=load_fixture("accounts_list.json"))
+        await client.login()
+
+
+async def test_empty_answer_then_sign_in_form_is_bad_password(client: MDUClient) -> None:
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        _empty_answer(mocked)
+        for path in ("/account/load-accounts-list", "/mfa/enabled"):
+            mocked.get(f"{BASE}{path}", status=302, headers={"Location": f"{BASE}/login"}, repeat=True)
+        mocked.get(f"{BASE}/", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/login", body=load_fixture("login.html"), content_type="text/html")
+        with pytest.raises(MDUAuthenticationError):
+            await client.login()
+
+
+def test_summarize_headers_hides_cookie_values() -> None:
+    from custom_components.mdu.api import summarize_headers
+
+    summary = summarize_headers({"Set-Cookie": "JSESSIONID=secret; Path=/", "Content-Length": "0", "X-Thing": "v"})
+    assert summary == "set-cookie JSESSIONID, content-length=0, x-thing"
+    assert "secret" not in summary
 
 
 async def test_empty_session_user_means_signed_out(client: MDUClient) -> None:

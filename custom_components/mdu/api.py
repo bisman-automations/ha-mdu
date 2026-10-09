@@ -199,21 +199,47 @@ class MDUClient:
                 final = resp.url
                 status = resp.status
                 hops = [f"{r.status} {r.url.path}" for r in resp.history]
+                headers = summarize_headers(resp.headers)
+                onward = _onward_url(resp.headers)
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise MDUConnectionError(f"Sign-in request failed: {err}") from err
 
+        _LOGGER.debug(
+            "Sign-in answered HTTP %s at %s via %s; headers: %s; page: %s",
+            status,
+            final.path,
+            hops or "no redirects",
+            headers,
+            describe_page(html),
+        )
+        if await self._classify_sign_in(final, html):
+            return
+
+        # The answer was neither a page we know nor a working session. A
+        # browser would follow a Refresh or Location header on it, or simply
+        # load the next page; do the same once and look again.
+        next_url = urljoin(str(final), onward) if onward else f"{self.base_url}/"
+        next_final, next_html = await self._get_page(next_url)
+        _LOGGER.debug("Followed sign-in to %s; page: %s", next_final.path, describe_page(next_html))
+        if await self._classify_sign_in(next_final, next_html, allow_bad_password=True):
+            return
+
+        raise MDUConnectionError(
+            f"Sign-in ended on an unexpected page: {final.path} (HTTP {status}, "
+            f"redirects: {', '.join(hops) or 'none'}, headers: {headers}, page: {describe_page(html)}; "
+            f"then {next_final.path}: {describe_page(next_html)})"
+        )
+
+    async def _classify_sign_in(self, final: URL, html: str, allow_bad_password: bool = False) -> bool:
+        """Decide what a page after signing in means.
+
+        Returns True when signed in, raises MDUMfaRequired or
+        MDUAuthenticationError, and returns False when it can't tell.
+        """
         self._read_csrf(html)
         path = final.path.rstrip("/").lower()
         has_mfa_view = "MfaController" in html
         has_login_form = 'id="login-form"' in html or "LoginCtrl" in html
-        _LOGGER.debug(
-            "Sign-in landed on %s with HTTP %s via %s (code page: %s, sign-in form: %s)",
-            final.path,
-            status,
-            hops or "no redirects",
-            has_mfa_view,
-            has_login_form,
-        )
 
         # The portal may show the security-code page at /login itself, so the
         # address alone says little. Decide from what the session can do.
@@ -223,19 +249,16 @@ class MDUClient:
 
         accounts = await self._probe_json("/account/load-accounts-list")
         if isinstance(accounts, dict) and accounts.get("object"):
-            return
+            return True
 
         mfa = await self._probe_json(urljoin(str(final), "mfa/enabled"))
         if isinstance(mfa, dict) and mfa.get("status") == "OK":
             self._mfa_page = str(final)
             raise MDUMfaRequired("MDU asked for a security code")
 
-        if has_login_form or "error" in final.query:
+        if "error" in final.query or (has_login_form and (allow_bad_password or path == "/login")):
             raise MDUAuthenticationError("MDU rejected the username or password")
-        raise MDUConnectionError(
-            f"Sign-in ended on an unexpected page: {final.path} (HTTP {status}, "
-            f"redirects: {', '.join(hops) or 'none'}, page: {describe_page(html)})"
-        )
+        return False
 
     async def mfa_contacts(self) -> list[str]:
         """Return the email addresses and phone numbers a code can go to."""
@@ -528,6 +551,32 @@ def describe_page(html: str, limit: int = 200) -> str:
     if not text:
         return f"{head}(no text, {len(html or '')} bytes)"
     return f"{head}{text[:limit]}{'…' if len(text) > limit else ''}"
+
+
+_HEADERS_WITH_VALUES = ("content-type", "content-length", "location", "refresh", "x-frame-options", "server")
+
+
+def summarize_headers(headers: Any) -> str:
+    """Describe response headers for the log: names, cookie names, and a few safe values."""
+    parts = []
+    for name, value in headers.items():
+        low = name.lower()
+        if low == "set-cookie":
+            parts.append(f"set-cookie {value.split('=', 1)[0].strip()}")
+        elif low in _HEADERS_WITH_VALUES:
+            parts.append(f"{low}={value[:80]}")
+        else:
+            parts.append(low)
+    return ", ".join(parts) or "none"
+
+
+def _onward_url(headers: Any) -> str | None:
+    """Return where a Refresh or Location header points, if anywhere."""
+    if refresh := headers.get("Refresh"):
+        match = re.search(r"url\s*=\s*['\"]?([^'\";]+)", refresh, re.I)
+        if match:
+            return match.group(1).strip()
+    return headers.get("Location") or None
 
 
 TRUST_COOKIE = "mfa-token"
