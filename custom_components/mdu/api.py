@@ -195,13 +195,30 @@ class MDUClient:
 
         self._read_csrf(html)
         path = final.path.rstrip("/").lower()
-        _LOGGER.debug("Sign-in landed on %s", final.path)
+        has_mfa_view = "MfaController" in html
+        has_login_form = 'id="login-form"' in html or "LoginCtrl" in html
+        _LOGGER.debug(
+            "Sign-in landed on %s (code page: %s, sign-in form: %s)", final.path, has_mfa_view, has_login_form
+        )
 
-        if "mfa" in path:
+        # The portal may show the security-code page at /login itself, so the
+        # address alone says little. Decide from what the session can do.
+        if has_mfa_view or "mfa" in path:
             self._mfa_page = str(final)
             raise MDUMfaRequired("MDU asked for a security code")
-        if path == "/login" or "error" in final.query:
+
+        accounts = await self._probe_json("/account/load-accounts-list")
+        if isinstance(accounts, dict) and accounts.get("object"):
+            return
+
+        mfa = await self._probe_json(urljoin(str(final), "mfa/enabled"))
+        if isinstance(mfa, dict) and mfa.get("status") == "OK":
+            self._mfa_page = str(final)
+            raise MDUMfaRequired("MDU asked for a security code")
+
+        if has_login_form or "error" in final.query:
             raise MDUAuthenticationError("MDU rejected the username or password")
+        raise MDUConnectionError(f"Sign-in ended on an unexpected page: {final.path}")
 
     async def mfa_contacts(self) -> list[str]:
         """Return the email addresses and phone numbers a code can go to."""
@@ -253,12 +270,12 @@ class MDUClient:
         """Return the persistent cookies, so a trusted device stays trusted.
 
         After ``mfa_verify`` with ``trust`` the portal remembers this client by
-        cookie. Only cookies with an expiry are kept; the session cookie is
-        not worth storing.
+        its ``mfa-token`` cookie. That one is always kept, with any other
+        cookie that has an expiry; the session cookie is not worth storing.
         """
         cookies: dict[str, dict[str, Any]] = {}
         for cookie in self._session.cookie_jar:
-            if not (cookie["expires"] or cookie["max-age"]):
+            if not _is_trust_cookie(cookie):
                 continue
             cookies[cookie.key] = {
                 "value": cookie.value,
@@ -292,7 +309,7 @@ class MDUClient:
 
     def clear_session(self) -> None:
         """Drop the session cookies, keeping the persistent (trusted) ones."""
-        self._session.cookie_jar.clear(lambda c: not (c["expires"] or c["max-age"]))
+        self._session.cookie_jar.clear(lambda c: not _is_trust_cookie(c))
         self._csrf = None
         self._account_id = None
         self._mfa_page = None
@@ -351,6 +368,9 @@ class MDUClient:
     async def get_account(self) -> MDUAccount:
         """Return the selected account."""
         data = await self._json("GET", "/session/user")
+        if data is None:
+            # Signed out, the portal answers 200 with an empty body.
+            raise MDUSessionExpired("GET /session/user: not signed in")
         user = data.get("object", data) if isinstance(data, dict) else {}
         selected = user.get("selectedAccount") or {}
         if not selected:
@@ -391,6 +411,28 @@ class MDUClient:
                 return resp.url, await resp.text()
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise MDUConnectionError(f"GET {path} failed: {err}") from err
+
+    async def _probe_json(self, path: str) -> Any:
+        """GET without following redirects; return JSON, or None if not signed in."""
+        headers = {"Accept": "application/json, text/plain, */*"}
+        if self._csrf:
+            headers[self._csrf_header] = self._csrf
+        try:
+            async with self._session.get(
+                urljoin(self.base_url, path),
+                headers=headers,
+                allow_redirects=False,
+                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                text = await resp.text()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            raise MDUConnectionError(f"GET {path} failed: {err}") from err
+        try:
+            return json.loads(text) if text.strip() else None
+        except ValueError:
+            return None
 
     async def _mfa_call(self, method: str, path: str, **kwargs: Any) -> Any:
         if not self._mfa_page:
@@ -452,6 +494,14 @@ class MDUClient:
 # ----------------------------------------------------------------------
 # Parsing
 # ----------------------------------------------------------------------
+
+
+TRUST_COOKIE = "mfa-token"
+
+
+def _is_trust_cookie(cookie: Morsel) -> bool:
+    """Return whether a cookie should survive between sign-ins (``mfa-token`` or any persistent one)."""
+    return cookie.key == TRUST_COOKIE or bool(cookie["expires"] or cookie["max-age"])
 
 
 def usage_unit(gl_division: str | None, sa_type: str | None) -> str:

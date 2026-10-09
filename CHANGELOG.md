@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-09
+
+### Fixed
+- Signing in with MFA turned on reported "MDU rejected the username or
+  password". The portal shows the security-code page at the sign-in address,
+  so sign-in is now judged by what the session can do (load the account list,
+  or answer the MFA check) instead of by the address it lands on. A page the
+  integration doesn't recognize is reported as a connection problem, not a
+  wrong password.
+- The portal's trusted-device cookie (`mfa-token`) is always kept, so a
+  verified connection isn't asked for a code again.
+
 ## [0.1.0] - 2026-10-09
 
 ### Added

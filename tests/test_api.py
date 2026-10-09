@@ -9,6 +9,7 @@ import pytest
 from custom_components.mdu.api import MDUClient
 from custom_components.mdu.exceptions import (
     MDUAuthenticationError,
+    MDUConnectionError,
     MDUMfaError,
     MDUMfaRequired,
     MDUSessionExpired,
@@ -28,6 +29,12 @@ async def client():
 
 def _login_page(mocked: aioresponses) -> None:
     mocked.get(f"{BASE}/login", body=load_fixture("login.html"), content_type="text/html")
+
+
+def _not_signed_in(mocked: aioresponses) -> None:
+    """Protected endpoints redirect to the sign-in page."""
+    for path in ("/account/load-accounts-list", "/mfa/enabled"):
+        mocked.get(f"{BASE}{path}", status=302, headers={"Location": f"{BASE}/login"})
 
 
 async def test_login_success_and_read_account(client: MDUClient) -> None:
@@ -72,6 +79,7 @@ async def test_login_bad_password(client: MDUClient) -> None:
         _login_page(mocked)
         mocked.post(f"{BASE}/login", status=302, headers={"Location": f"{BASE}/login?error"})
         mocked.get(re.compile(r".*/login\?error$"), body=load_fixture("login.html"), content_type="text/html")
+        _not_signed_in(mocked)
         with pytest.raises(MDUAuthenticationError):
             await client.login()
 
@@ -142,3 +150,56 @@ async def test_trusted_cookies_round_trip(client: MDUClient) -> None:
     client.clear_session()
     assert "TRUSTED_DEVICE" in client.export_trusted_cookies()
     assert re.match(r"https://", client.base_url)
+
+
+async def test_mfa_page_served_at_login(client: MDUClient) -> None:
+    """The portal can show the code page at /login itself; that is not a bad password."""
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        mocked.post(f"{BASE}/login", body=load_fixture("mfa_page.html"), content_type="text/html")
+        mocked.get(f"{BASE}/mfa/contact-details", payload={"status": "OK", "object": {"emails": ["d@x.com"], "phones": []}})
+        with pytest.raises(MDUMfaRequired):
+            await client.login()
+        assert await client.mfa_contacts() == ["d@x.com"]
+
+
+async def test_mfa_detected_by_endpoint(client: MDUClient) -> None:
+    """No code page markup, but the MFA endpoint answers: a code is needed."""
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        mocked.post(f"{BASE}/login", body="<html><body>Loading…</body></html>", content_type="text/html")
+        mocked.get(f"{BASE}/account/load-accounts-list", status=302, headers={"Location": f"{BASE}/login"})
+        mocked.get(f"{BASE}/mfa/enabled", payload={"status": "OK", "object": True})
+        with pytest.raises(MDUMfaRequired):
+            await client.login()
+
+
+async def test_login_success_detected_by_accounts(client: MDUClient) -> None:
+    """Landing on /login is fine if the account list loads."""
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        mocked.post(f"{BASE}/login", body=load_fixture("login.html"), content_type="text/html")
+        mocked.get(f"{BASE}/account/load-accounts-list", payload=load_fixture("accounts_list.json"))
+        await client.login()
+
+
+async def test_unexpected_page_is_not_bad_password(client: MDUClient) -> None:
+    with aioresponses() as mocked:
+        _login_page(mocked)
+        mocked.post(f"{BASE}/login", body="<html><body>Maintenance</body></html>", content_type="text/html")
+        _not_signed_in(mocked)
+        with pytest.raises(MDUConnectionError):
+            await client.login()
+
+
+async def test_empty_session_user_means_signed_out(client: MDUClient) -> None:
+    with aioresponses() as mocked:
+        mocked.get(f"{BASE}/session/user", body="", status=200)
+        with pytest.raises(MDUSessionExpired):
+            await client.get_account()
+
+
+async def test_mfa_token_kept_without_expiry(client: MDUClient) -> None:
+    client.import_trusted_cookies({"mfa-token": {"value": "tok", "domain": "", "path": "/"}})
+    client.clear_session()
+    assert client.export_trusted_cookies()["mfa-token"]["value"] == "tok"
