@@ -42,13 +42,13 @@ Each usage sensor's attributes include the billing month, the value in MDU's own
 
 **Long-term statistics for the Energy dashboard**
 
-| Statistic | Unit | Where to add it |
+| Statistic | Unit | Contents |
 | --- | --- | --- |
-| `mdu:<account>_<service>_electric_usage` | kWh | **Electricity grid → Grid consumption** |
-| `mdu:<account>_<service>_gas_usage` | GJ | **Gas consumption** |
-| `mdu:<account>_bill_cost` | USD | As the cost of that consumption: choose **Use an entity tracking the total costs** and pick this statistic |
+| MDU Electric usage `<account>` `<service>` | kWh | Monthly electric usage |
+| MDU Gas usage `<account>` `<service>` | GJ | Monthly gas usage |
+| MDU bill cost `<account>` | USD | Each bill's total, by the month it was billed |
 
-Usage covers every billed month MDU shows (about two years), one entry per month. The cost statistic is each bill's total, by the month it was billed. Bills cover the whole account, so for an account with both electric and gas service the cost is their combined total.
+Usage covers every billed month MDU shows (about two years). Bills cover the whole account, so for an account with both electric and gas service the cost is their combined total. See [Energy dashboard setup](#energy-dashboard-setup) for where each one goes.
 
 ### About the data
 
@@ -79,6 +79,53 @@ Copy `custom_components/mdu` into your Home Assistant `config/custom_components`
 4. If your login has more than one account, pick the account. Add the integration again for each other account.
 
 If your password changes, or MDU stops trusting the connection, Home Assistant shows a **Reconfigure** prompt asking you to sign in again (with a new security code if MDU wants one).
+
+## 📊 Energy Dashboard Integration
+
+Once configured, your MDU usage and bills appear in Home Assistant as monthly long-term statistics built for the Energy dashboard, alongside the visible sensors listed under [What you get](#what-you-get).
+
+### Energy dashboard setup
+
+The statistics appear in the Energy dashboard's pickers a few minutes after the integration's first refresh. Search for **MDU** to find them. Below, `<account>` and `<service>` stand for your account number and the service agreement number of the gas or electric service.
+
+**Gas**
+
+1. Go to **Settings** → **Dashboards** → **Energy**.
+2. Under **Gas consumption**, select **Add gas source**.
+3. For **Gas consumption**, pick **MDU Gas usage `<account>` `<service>`**.
+4. For cost, choose **Use an entity tracking the total costs** and pick **MDU bill cost `<account>`**.
+5. Optionally change the **Display name** (for example "Montana-Dakota Utilities"), then **Save**.
+
+**Electric** (accounts with MDU electric service)
+
+1. Under **Electricity grid**, select **Add consumption**.
+2. For **Grid consumption**, pick **MDU Electric usage `<account>` `<service>`**.
+3. For cost, choose **Use an entity tracking the total costs** and pick **MDU bill cost `<account>`**, unless the account also has gas service (see [Cost](#cost)).
+4. Optionally change the **Display name**, then **Save**.
+
+**What you'll see**
+
+- **One bar per month.** MDU only publishes usage per billing month, so each month's usage sits on the 1st; day and week views show it all on that day.
+- **Gas in kWh.** MDU bills gas in dekatherms (Dk). The integration records it as energy in GJ, and the Energy dashboard shows energy in kWh. 1 Dk ≈ 293 kWh ≈ 1.055 GJ, so divide the dashboard figure by 293 to compare with your bill.
+- **The current month fills in late.** A month stays empty until MDU posts its bill.
+- **Leave the other fields empty.** **Gas flow rate** isn't used; there's no solar return data from MDU.
+
+#### Cost
+
+Each account gets one **bill cost** statistic (`mdu:<account>_bill_cost`, in USD): every bill's total, placed on the month it was billed. It includes everything on the bill, such as the customer charge and taxes, so a month's cost matches the bill exactly.
+
+Bills cover the whole account. For an account with both electric and gas service, the bill cost is their combined total: add it to one source only, or the Energy dashboard counts it twice.
+
+### History
+
+On setup the integration imports every month MDU shows: about two years of usage and the last twelve bills. From then on it adds each new month as MDU posts it, so history keeps growing. Because MDU shows fewer bills than months of usage, a view reaching back more than a year shows usage with no cost for the oldest months.
+
+### Sensor Details
+
+- **Device Class**: Energy for both electric and gas usage (Home Assistant's gas device class only accepts volume units)
+- **State Class**: none on the visible "last month" sensors; the imported statistics are cumulative sums for dashboard use
+- **Unit**: kWh for electric usage, GJ for gas usage (the original Dk value is in the `source_value` attribute)
+- **Icon**: Lightning bolt (mdi:flash) for electric usage, flame (mdi:fire) for gas usage
 
 ## Troubleshooting
 
