@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
   sign-in attempts then failed with "Couldn't reach MDU" until a restart.
   Sessions are now detached, as Home Assistant requires.
 
+### Changed
+- Sign-in problems during setup are logged as warnings with the reason, so
+  they show in Home Assistant's logs without debug logging.
+
 ## [0.1.1] - 2026-10-09
 
 ### Fixed

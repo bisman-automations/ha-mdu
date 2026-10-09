@@ -120,7 +120,7 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 await self._client.mfa_send_code(user_input[CONF_MFA_CONTACT])
             except MDUError as err:
-                _LOGGER.debug("Sending security code failed: %s", err)
+                _LOGGER.warning("Sending MDU security code failed: %s", err)
                 errors["base"] = "mfa_send_failed"
             else:
                 return await self.async_step_mfa_code()
@@ -146,7 +146,8 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self._client.mfa_verify(user_input[CONF_MFA_CODE])
             except MDUMfaError as err:
                 errors["base"] = f"mfa_{err.reason}"
-            except MDUConnectionError:
+            except MDUConnectionError as err:
+                _LOGGER.warning("Could not verify the MDU security code: %s", err)
                 errors["base"] = "cannot_connect"
             else:
                 return await self._async_after_sign_in(errors) or self.async_show_form(
@@ -202,17 +203,19 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 self._contacts = await self._client.mfa_contacts()
             except MDUError as err:
-                _LOGGER.debug("Reading security code contacts failed: %s", err)
+                _LOGGER.warning("Reading MDU security code contacts failed: %s", err)
                 errors["base"] = "cannot_connect"
                 return None
             if not self._contacts:
                 errors["base"] = "mfa_no_contacts"
                 return None
             return await self.async_step_mfa_contact()
-        except MDUAuthenticationError:
+        except MDUAuthenticationError as err:
+            _LOGGER.warning("MDU sign-in failed: %s", err)
             errors["base"] = "invalid_auth"
             return None
-        except MDUConnectionError:
+        except MDUConnectionError as err:
+            _LOGGER.warning("MDU sign-in failed: %s", err)
             errors["base"] = "cannot_connect"
             return None
         except Exception:
@@ -227,7 +230,7 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             self._accounts = await self._client.get_accounts()
         except MDUError as err:
-            _LOGGER.debug("Reading accounts failed: %s", err)
+            _LOGGER.warning("Reading MDU accounts failed: %s", err)
             errors["base"] = "cannot_connect"
             return None
         if not self._accounts:
