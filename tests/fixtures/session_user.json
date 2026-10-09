@@ -1,0 +1,20 @@
+{
+  "username": "donavan",
+  "selectedAccountId": "1234567890",
+  "selectedAccount": {
+    "accountId": "1234567890",
+    "accountDescription": "Home",
+    "status": "Active",
+    "accountBalance": "182.45",
+    "amountDue": 182.45,
+    "lastBillAmountDue": "$182.45",
+    "bills": [
+      {"id": "900001", "billDate": "2026-08-14", "dueDate": "2026-09-08"},
+      {"id": "900002", "billDate": "2026-09-14", "dueDate": "2026-10-08"}
+    ],
+    "saList": [
+      {"id": "5550001", "status": "Active", "premise": {"id": "7770001", "address": "123 Main St, Bismarck ND"}},
+      {"id": "5550002", "status": "Active", "premise": {"id": "7770001", "address": "123 Main St, Bismarck ND"}}
+    ]
+  }
+}

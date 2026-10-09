@@ -1,0 +1,73 @@
+{
+  "title": "Montana-Dakota Utilities",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Montana-Dakota Utilities",
+        "description": "Sign in with the username and password you use for MDU Online Account Services (customer.montana-dakota.com).",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in to MDU again",
+        "description": "MDU no longer accepts the saved sign-in for {username}. Enter your current password. If MDU asks for a security code, you'll be prompted next.",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "mfa_contact": {
+        "title": "Security code",
+        "description": "MDU wants a security code to finish signing in. Choose where to send it. Home Assistant asks MDU to trust this connection, so you shouldn't be asked again unless MDU forgets it.",
+        "data": {
+          "mfa_contact": "Send the code to"
+        }
+      },
+      "mfa_code": {
+        "title": "Enter the security code",
+        "description": "Enter the 5-digit code MDU just sent.",
+        "data": {
+          "mfa_code": "Security code"
+        }
+      },
+      "account": {
+        "title": "Choose an account",
+        "description": "Your sign-in has more than one MDU account. Pick the one to add; add the integration again for the others.",
+        "data": {
+          "account_id": "Account"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Couldn't reach MDU Online Account Services. Try again later.",
+      "invalid_auth": "MDU rejected the username or password.",
+      "unknown": "Unexpected error. Check the logs.",
+      "mfa_no_contacts": "MDU asked for a security code but has no email or phone on file to send it to. Sign in on the MDU website to fix this.",
+      "mfa_send_failed": "MDU couldn't send the security code. Try again.",
+      "mfa_invalid_code": "That code is incorrect. Try again or go back to request a new one.",
+      "mfa_code_expired": "That code has expired. Start again to get a new one.",
+      "mfa_too_many_attempts": "Too many incorrect codes. Start again to get a new one.",
+      "mfa_cannot_connect": "MDU couldn't check the code. Try again."
+    },
+    "abort": {
+      "already_configured": "This MDU account is already configured.",
+      "no_accounts": "No accounts were found for this sign-in.",
+      "account_missing": "The account this entry was set up with isn't available to this sign-in anymore.",
+      "reauth_successful": "Signed in to MDU again."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "account_balance": { "name": "Account balance" },
+      "amount_due": { "name": "Amount due" },
+      "last_bill_amount": { "name": "Last bill amount" },
+      "due_date": { "name": "Due date" },
+      "last_bill_date": { "name": "Last bill date" },
+      "electric_usage": { "name": "Electric usage last month" },
+      "gas_usage": { "name": "Gas usage last month" },
+      "electric_usage_service": { "name": "Electric usage last month ({service})" },
+      "gas_usage_service": { "name": "Gas usage last month ({service})" }
+    }
+  }
+}

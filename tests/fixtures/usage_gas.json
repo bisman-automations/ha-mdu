@@ -1,0 +1,16 @@
+{"status": "SUCCESS", "object": {
+  "saId": "5550002", "premiseId": "7770001", "glDivision": "MDU", "saType": "Gas",
+  "usageYearComparisonChartList": [
+    {"month": "Jan", "tyTherms": 18.2, "lyTherms": 16.9},
+    {"month": "Feb", "tyTherms": 15.1, "lyTherms": 14.0},
+    {"month": "Mar", "tyTherms": 11.4, "lyTherms": 10.2},
+    {"month": "Apr", "tyTherms": 6.3, "lyTherms": 5.8},
+    {"month": "May", "tyTherms": 3.1, "lyTherms": 2.9},
+    {"month": "Jun", "tyTherms": 1.4, "lyTherms": 1.5},
+    {"month": "Jul", "tyTherms": 1.1, "lyTherms": 1.2},
+    {"month": "Aug", "tyTherms": 1.2, "lyTherms": 1.1},
+    {"month": "Sep", "tyTherms": 2.0, "lyTherms": 1.9},
+    {"month": "Oct", "tyTherms": null, "lyTherms": 6.1},
+    {"month": "Nov", "tyTherms": null, "lyTherms": 11.8},
+    {"month": "Dec", "tyTherms": null, "lyTherms": 16.2}
+  ]}}

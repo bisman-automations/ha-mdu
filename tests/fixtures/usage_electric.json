@@ -1,0 +1,16 @@
+{"status": "SUCCESS", "object": {
+  "saId": "5550001", "premiseId": "7770001", "glDivision": "MDU", "saType": "Electric",
+  "usageYearComparisonChartList": [
+    {"month": "Jan-2026", "tyTherms": 910, "lyTherms": 880},
+    {"month": "Feb-2026", "tyTherms": 850, "lyTherms": 820},
+    {"month": "Mar-2026", "tyTherms": 760, "lyTherms": 700},
+    {"month": "Apr-2026", "tyTherms": 640, "lyTherms": 610},
+    {"month": "May-2026", "tyTherms": 590, "lyTherms": 560},
+    {"month": "Jun-2026", "tyTherms": 720, "lyTherms": 690},
+    {"month": "Jul-2026", "tyTherms": 980, "lyTherms": 940},
+    {"month": "Aug-2026", "tyTherms": 1010, "lyTherms": 970},
+    {"month": "Sep-2026", "tyTherms": 830, "lyTherms": 800},
+    {"month": "Oct-2026", "tyTherms": 0, "lyTherms": 650},
+    {"month": "Nov-2026", "tyTherms": 0, "lyTherms": 700},
+    {"month": "Dec-2026", "tyTherms": 0, "lyTherms": 860}
+  ]}}

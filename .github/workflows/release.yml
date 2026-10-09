@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check manifest version matches tag
+        run: |
+          manifest_version=$(jq -r .version custom_components/mdu/manifest.json)
+          if [ "v${manifest_version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match manifest version ${manifest_version}"
+            exit 1
+          fi
+
+      - name: Zip integration
+        run: cd custom_components/mdu && zip -r "${GITHUB_WORKSPACE}/mdu.zip" . -x '__pycache__/*'
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: mdu.zip
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}

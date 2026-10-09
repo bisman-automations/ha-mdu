@@ -1,0 +1,17 @@
+{
+  "domain": "mdu",
+  "name": "Montana-Dakota Utilities",
+  "codeowners": [
+    "@donavanbecker"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "recorder"
+  ],
+  "documentation": "https://github.com/bisman-automations/ha-mdu",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/bisman-automations/ha-mdu/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

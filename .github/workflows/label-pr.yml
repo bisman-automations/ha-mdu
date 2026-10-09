@@ -1,0 +1,36 @@
+name: Label PR
+
+# Applies a release-notes label from the change type ticked in the PR template.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+            const types = {
+              "Breaking Change": "breaking",
+              "New Feature": "feature",
+              "Bug Fix": "bug",
+              "Performance": "performance",
+              "Maintenance": "maintenance",
+              "Documentation": "documentation",
+            };
+            const labels = Object.entries(types)
+              .filter(([name]) => new RegExp(`-\\s*\\[x\\]\\s*${name}`, "i").test(body))
+              .map(([, label]) => label);
+            if (labels.length) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: context.payload.pull_request.number,
+                labels,
+              });
+            }

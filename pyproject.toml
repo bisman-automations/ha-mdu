@@ -1,0 +1,14 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+# Errors and likely bugs only; the existing code style (indentation, f-string
+# logging) is left as-is rather than reformatted wholesale.
+select = ["E9", "F", "B", "I"]
+ignore = ["B905"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components"]
+combine-as-imports = true
