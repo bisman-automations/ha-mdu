@@ -25,7 +25,7 @@ jobs:
       - name: Zip integration
         run: cd custom_components/mdu && zip -r "${GITHUB_WORKSPACE}/mdu.zip" . -x '__pycache__/*'
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: mdu.zip
           generate_release_notes: true
