@@ -58,16 +58,48 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "autopay": {
+        "name": "Autopay"
+      },
+      "budget_pay": {
+        "name": "Budget Pay"
+      }
+    },
     "sensor": {
-      "account_balance": { "name": "Account balance" },
-      "amount_due": { "name": "Amount due" },
-      "last_bill_amount": { "name": "Last bill amount" },
-      "due_date": { "name": "Due date" },
-      "last_bill_date": { "name": "Last bill date" },
-      "electric_usage": { "name": "Electric usage last month" },
-      "gas_usage": { "name": "Gas usage last month" },
-      "electric_usage_service": { "name": "Electric usage last month ({service})" },
-      "gas_usage_service": { "name": "Gas usage last month ({service})" }
+      "account_balance": {
+        "name": "Account balance"
+      },
+      "amount_due": {
+        "name": "Amount due"
+      },
+      "last_bill_amount": {
+        "name": "Last bill amount"
+      },
+      "due_date": {
+        "name": "Due date"
+      },
+      "last_bill_date": {
+        "name": "Last bill date"
+      },
+      "electric_usage": {
+        "name": "Electric usage last month"
+      },
+      "gas_usage": {
+        "name": "Gas usage last month"
+      },
+      "electric_usage_service": {
+        "name": "Electric usage last month ({service})"
+      },
+      "gas_usage_service": {
+        "name": "Gas usage last month ({service})"
+      },
+      "last_payment_amount": {
+        "name": "Last payment amount"
+      },
+      "last_payment_date": {
+        "name": "Last payment date"
+      }
     }
   }
 }

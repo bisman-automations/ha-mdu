@@ -23,14 +23,33 @@ def test_parse_account() -> None:
     account = parse_account(load_fixture("session_user.json")["selectedAccount"])
     assert account.account_id == "1234567890"
     assert account.description == "Home"
-    assert account.account_balance == 182.45
-    assert account.amount_due == 182.45
-    assert account.last_bill_amount == 182.45
-    assert account.last_bill_date == date(2026, 9, 14)
-    assert account.due_date == date(2026, 10, 8)
-    assert [sa.sa_id for sa in account.service_agreements] == ["5550001", "5550002"]
+    assert account.account_balance == 0
+    # Amounts come from the latest bill, not the account-level "still owed" figure.
+    assert account.last_bill_amount == 48.75
+    assert account.amount_due == 48.75
+    assert account.last_bill_date == date(2026, 9, 10)
+    assert account.due_date == date(2026, 10, 2)
+    assert [b.bill_date for b in account.bills] == [date(2026, 8, 12), date(2026, 9, 10)]
+    # The latest completed payment, not the pending one.
+    assert account.last_payment.amount == 48.75
+    assert account.last_payment.payment_date == date(2026, 10, 1)
+    assert account.autopay is True
+    assert account.budget_pay is False
+    assert [sa.sa_id for sa in account.service_agreements] == ["5550001", "5550002", "5550003"]
+    assert [sa.active for sa in account.service_agreements] == [True, True, False]
     assert account.service_agreements[0].premise_id == "7770001"
-    assert account.service_agreements[0].address == "123 Main St, Bismarck ND"
+    assert account.service_agreements[0].address == "123 MAIN ST, BISMARCK, ND, 58501"
+    assert account.service_agreements[1].sa_type == "G-RES"
+
+
+@pytest.mark.parametrize(
+    ("active", "status", "expected"),
+    [(True, "Closed", True), (None, "Closed", False), (None, "Stopped", False), (None, "Active", True), (None, None, True)],
+)
+def test_service_active(active, status, expected) -> None:
+    from custom_components.mdu.api import _is_active
+
+    assert _is_active(active, status) is expected
 
 
 def test_parse_usage_with_years() -> None:

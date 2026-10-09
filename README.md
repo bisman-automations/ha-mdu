@@ -21,22 +21,34 @@ A Home Assistant custom integration for [Montana-Dakota Utilities](https://www.m
 
 | Sensor | Description |
 | --- | --- |
-| Account balance | Current balance on the account |
-| Amount due | Amount currently due |
-| Last bill amount | Amount of the most recent bill |
+| Account balance | What's owed on the account right now ($0 when paid up) |
+| Amount due | Amount due on the most recent bill |
+| Last bill amount | Total of the most recent bill |
 | Due date | Due date of the most recent bill |
 | Last bill date | Date of the most recent bill |
+| Last payment amount | Most recent completed payment |
+| Last payment date | Date of that payment |
+| Autopay | On when the account is enrolled in Autopay (diagnostic) |
+| Budget Pay | On when the account is on Budget Pay (diagnostic) |
 
-**Usage sensors** (one per electric or gas service)
+**Usage sensors** (one per active electric or gas service)
 
 | Sensor | Unit | Description |
 | --- | --- | --- |
 | Electric usage last month | kWh | Usage on the most recent bill |
 | Gas usage last month | GJ | Usage on the most recent bill, converted from dekatherms |
 
-Each usage sensor's attributes include the billing month, the value in MDU's own unit (`source_value`, `source_unit`), the same month last year, and the service address.
+Each usage sensor's attributes include the billing month, the value in MDU's own unit (`source_value`, `source_unit`), the same month last year, and the service address. Closed services (an old address, for example) are skipped.
 
-**Long-term statistics.** Every billed month MDU shows (about two years) is written to a statistic named `mdu:<account>_<service>_electric_usage` or `..._gas_usage`, one entry per month. Add these in the Energy dashboard: the electric one under **Electricity grid → Grid consumption**, the gas one under **Gas consumption**.
+**Long-term statistics for the Energy dashboard**
+
+| Statistic | Unit | Where to add it |
+| --- | --- | --- |
+| `mdu:<account>_<service>_electric_usage` | kWh | **Electricity grid → Grid consumption** |
+| `mdu:<account>_<service>_gas_usage` | GJ | **Gas consumption** |
+| `mdu:<account>_bill_cost` | USD | As the cost of that consumption: choose **Use an entity tracking the total costs** and pick this statistic |
+
+Usage covers every billed month MDU shows (about two years), one entry per month. The cost statistic is each bill's total, by the month it was billed. Bills cover the whole account, so for an account with both electric and gas service the cost is their combined total.
 
 ### About the data
 
@@ -78,7 +90,7 @@ logger:
     custom_components.mdu: debug
 ```
 
-If sensors are missing or values look wrong, open an issue with the debug log (remove your account numbers and address first).
+If sensors are missing or values look wrong, open an issue and attach the integration's diagnostics: **Settings → Devices & services → Montana-Dakota Utilities → ⋮ → Download diagnostics**. Your credentials, account and service numbers and addresses are removed from that file automatically.
 
 ## How it works
 

@@ -1,20 +1,101 @@
 {
-  "username": "donavan",
-  "selectedAccountId": "1234567890",
-  "selectedAccount": {
-    "accountId": "1234567890",
-    "accountDescription": "Home",
+ "username": "donavan",
+ "selectedAccountId": "1234567890",
+ "selectedAccount": {
+  "accountId": "1234567890",
+  "accountDescription": "Home  ",
+  "status": "Active",
+  "accountBalance": 0,
+  "lastBillAmountDue": 0,
+  "autopay": {
+   "enrolled": true,
+   "status": null
+  },
+  "budgetPay": {
+   "enrolled": false,
+   "amount": 0,
+   "amountDue": 0,
+   "balance": 0
+  },
+  "bills": [
+   {
+    "id": "900002",
+    "billDate": 1789016400000,
+    "dueDate": 1790917200000,
+    "amount": 48.75,
+    "amountDue": 48.75
+   },
+   {
+    "id": "900001",
+    "billDate": 1786510800000,
+    "dueDate": 1788411600000,
+    "amount": 61.2,
+    "amountDue": 61.2
+   }
+  ],
+  "payments": [
+   {
+    "paymentAmount": 61.2,
+    "paymentDate": 1788325200000,
+    "paymentStatus": "C"
+   },
+   {
+    "paymentAmount": 48.75,
+    "paymentDate": 1790830800000,
+    "paymentStatus": "C"
+   },
+   {
+    "paymentAmount": 20.0,
+    "paymentDate": 1791176400000,
+    "paymentStatus": "I"
+   }
+  ],
+  "saList": [
+   {
+    "id": "5550001",
+    "type": "E-RES   ",
     "status": "Active",
-    "accountBalance": "182.45",
-    "amountDue": 182.45,
-    "lastBillAmountDue": "$182.45",
-    "bills": [
-      {"id": "900001", "billDate": "2026-08-14", "dueDate": "2026-09-08"},
-      {"id": "900002", "billDate": "2026-09-14", "dueDate": "2026-10-08"}
-    ],
-    "saList": [
-      {"id": "5550001", "status": "Active", "premise": {"id": "7770001", "address": "123 Main St, Bismarck ND"}},
-      {"id": "5550002", "status": "Active", "premise": {"id": "7770001", "address": "123 Main St, Bismarck ND"}}
-    ]
-  }
+    "active": true,
+    "premise": {
+     "id": "7770001",
+     "address": {
+      "street": "123 MAIN ST          ",
+      "city": "BISMARCK",
+      "state": "ND",
+      "zip": "58501"
+     }
+    }
+   },
+   {
+    "id": "5550002",
+    "type": "G-RES   ",
+    "status": "Active",
+    "active": true,
+    "premise": {
+     "id": "7770001",
+     "address": {
+      "street": "123 MAIN ST          ",
+      "city": "BISMARCK",
+      "state": "ND",
+      "zip": "58501"
+     }
+    }
+   },
+   {
+    "id": "5550003",
+    "type": "G-RES   ",
+    "status": "Closed",
+    "active": false,
+    "premise": {
+     "id": "7770009",
+     "address": {
+      "street": "9 OLD RD",
+      "city": "MANDAN",
+      "state": "ND",
+      "zip": "58554"
+     }
+    }
+   }
+  ]
+ }
 }

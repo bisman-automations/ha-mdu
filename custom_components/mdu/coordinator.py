@@ -65,6 +65,10 @@ def to_native(history: UsageHistory, value: float) -> float:
     return round(kwh * GJ_PER_KWH, 4)
 
 
+def cost_statistic_id(account_id: str) -> str:
+    return f"{DOMAIN}:{account_id}_bill_cost".lower()
+
+
 def statistic_id(account_id: str, history: UsageHistory) -> str:
     kind = "gas" if history.is_gas else "electric"
     sa = history.service_agreement
@@ -102,7 +106,8 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
 
         self._save_trusted_cookies()
         for history in data.usage.values():
-            await self._insert_statistics(history)
+            await self._insert_usage_statistics(history)
+        await self._insert_cost_statistics(data.account)
         return data
 
     async def _fetch(self) -> MDUData:
@@ -115,6 +120,9 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
 
         usage: dict[str, UsageHistory] = {}
         for agreement in account.service_agreements:
+            if not agreement.active:
+                _LOGGER.debug("Skipping closed service %s (%s)", agreement.sa_id, agreement.status)
+                continue
             try:
                 history = await self.client.get_usage(agreement)
             except MDUError as err:
@@ -132,18 +140,58 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
                 data={**self.config_entry.data, CONF_TRUSTED_COOKIES: cookies},
             )
 
-    async def _insert_statistics(self, history: UsageHistory) -> None:
-        """Record monthly usage as an external statistic for the Energy dashboard.
+    async def _insert_usage_statistics(self, history: UsageHistory) -> None:
+        """Record a service's monthly usage for the Energy dashboard."""
+        kind = "Gas" if history.is_gas else "Electric"
+        await self._write_monthly(
+            statistic_id(self.account_id, history),
+            f"MDU {kind} usage {self.account_id} {history.service_agreement.sa_id}",
+            "GJ" if history.is_gas else "kWh",
+            "energy",
+            [(m.month, to_native(history, m.value)) for m in history.months],
+        )
 
-        MDU only publishes billed months, so each month is one statistic row
-        at local midnight on the 1st. The months the portal returns are
-        rewritten on every refresh; the running sum continues from what is
-        already recorded for the earliest of them, so older months that have
-        dropped out of the portal's window stay counted.
+    async def _insert_cost_statistics(self, account: MDUAccount) -> None:
+        """Record each bill's amount, by the month it was billed, as a cost statistic.
+
+        The Energy dashboard can use it as the cost of the account's usage.
+        Bills cover everything on the account, so for an account with both
+        electric and gas service this is their combined cost.
         """
-        stat_id = statistic_id(self.account_id, history)
-        months = history.months
-        first_start = _month_start(months[0].month)
+        monthly: dict[date, float] = {}
+        for bill in account.bills:
+            if bill.amount is None:
+                continue
+            month = bill.bill_date.replace(day=1)
+            monthly[month] = monthly.get(month, 0.0) + bill.amount
+        if not monthly:
+            return
+        await self._write_monthly(
+            cost_statistic_id(self.account_id),
+            f"MDU bill cost {self.account_id}",
+            "USD",
+            None,
+            sorted(monthly.items()),
+        )
+
+    async def _write_monthly(
+        self,
+        stat_id: str,
+        name: str,
+        unit: str,
+        unit_class: str | None,
+        values: list[tuple[date, float]],
+    ) -> None:
+        """Write one statistic row per month, at local midnight on the 1st.
+
+        MDU only publishes whole months. The months it returns are rewritten
+        on every refresh; the running sum continues from what is already
+        recorded before the earliest of them, so months that have dropped out
+        of MDU's window stay counted.
+        """
+        if not values:
+            return
+        first_start = _month_start(values[0][0])
 
         recorder = get_instance(self.hass)
         existing = await recorder.async_add_executor_job(
@@ -170,25 +218,20 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
 
         total = base
         statistics: list[StatisticData] = []
-        for month in months:
-            value = to_native(history, month.value)
+        for month, value in values:
             total += value
-            statistics.append(
-                StatisticData(start=_month_start(month.month), state=value, sum=round(total, 4))
-            )
+            statistics.append(StatisticData(start=_month_start(month), state=value, sum=round(total, 4)))
 
-        kind = "Gas" if history.is_gas else "Electric"
-        native_unit = "kWh" if not history.is_gas else "GJ"
-        metadata_kwargs = {
+        metadata_kwargs: dict = {
             "has_sum": True,
-            "name": f"MDU {kind} usage {self.account_id} {history.service_agreement.sa_id}",
+            "name": name,
             "source": DOMAIN,
             "statistic_id": stat_id,
-            "unit_of_measurement": native_unit,
+            "unit_of_measurement": unit,
         }
         if StatisticMeanType is not None:
             metadata_kwargs["mean_type"] = StatisticMeanType.NONE
-            metadata_kwargs["unit_class"] = "energy"
+            metadata_kwargs["unit_class"] = unit_class
         else:
             metadata_kwargs["has_mean"] = False
         _LOGGER.debug("Writing %d monthly statistics to %s", len(statistics), stat_id)

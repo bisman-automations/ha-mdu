@@ -1,0 +1,21 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "autopay": { "default": "mdi:bank-transfer-out", "state": { "off": "mdi:bank-off" } },
+      "budget_pay": { "default": "mdi:calendar-sync", "state": { "off": "mdi:calendar-remove" } }
+    },
+    "sensor": {
+      "account_balance": { "default": "mdi:cash" },
+      "amount_due": { "default": "mdi:cash-clock" },
+      "last_bill_amount": { "default": "mdi:receipt-text" },
+      "due_date": { "default": "mdi:calendar-alert" },
+      "last_bill_date": { "default": "mdi:calendar-text" },
+      "last_payment_amount": { "default": "mdi:cash-check" },
+      "last_payment_date": { "default": "mdi:calendar-check" },
+      "electric_usage": { "default": "mdi:flash" },
+      "electric_usage_service": { "default": "mdi:flash" },
+      "gas_usage": { "default": "mdi:fire" },
+      "gas_usage_service": { "default": "mdi:fire" }
+    }
+  }
+}

@@ -12,9 +12,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import MDUConfigEntry
 from .api import MDUAccount, UsageHistory
@@ -27,9 +25,9 @@ from .const import (
     ATTR_SERVICE_ADDRESS,
     ATTR_SOURCE_UNIT,
     ATTR_SOURCE_VALUE,
-    DOMAIN,
 )
-from .coordinator import MDUCoordinator, statistic_id, to_native
+from .coordinator import MDUCoordinator, cost_statistic_id, statistic_id, to_native
+from .entity import MDUEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -74,6 +72,20 @@ ACCOUNT_SENSORS: tuple[MDUAccountSensorDescription, ...] = (
         device_class=SensorDeviceClass.DATE,
         value_fn=lambda a: a.last_bill_date,
     ),
+    MDUAccountSensorDescription(
+        key="last_payment_amount",
+        translation_key="last_payment_amount",
+        device_class=SensorDeviceClass.MONETARY,
+        native_unit_of_measurement="USD",
+        suggested_display_precision=2,
+        value_fn=lambda a: a.last_payment.amount if a.last_payment else None,
+    ),
+    MDUAccountSensorDescription(
+        key="last_payment_date",
+        translation_key="last_payment_date",
+        device_class=SensorDeviceClass.DATE,
+        value_fn=lambda a: a.last_payment.payment_date if a.last_payment else None,
+    ),
 )
 
 
@@ -96,25 +108,6 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class MDUEntity(CoordinatorEntity[MDUCoordinator]):
-    """Common device info for an MDU account."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: MDUCoordinator) -> None:
-        super().__init__(coordinator)
-        account_id = coordinator.account_id
-        account = coordinator.data.account
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, account_id)},
-            name=f"MDU {account.description or account_id}",
-            manufacturer="Montana-Dakota Utilities",
-            model="Utility account",
-            entry_type=DeviceEntryType.SERVICE,
-            configuration_url=coordinator.client.base_url,
-        )
-
-
 class MDUAccountSensor(MDUEntity, SensorEntity):
     """Balance, amount due and billing dates for the account."""
 
@@ -131,7 +124,10 @@ class MDUAccountSensor(MDUEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {ATTR_ACCOUNT_ID: self.coordinator.account_id}
+        attrs: dict[str, Any] = {ATTR_ACCOUNT_ID: self.coordinator.account_id}
+        if self.entity_description.key == "last_bill_amount" and self.coordinator.data.account.bills:
+            attrs["statistic_id"] = cost_statistic_id(self.coordinator.account_id)
+        return attrs
 
 
 class MDUUsageSensor(MDUEntity, SensorEntity):

@@ -60,7 +60,7 @@ async def test_login_success_and_read_account(client: MDUClient) -> None:
         assert await client.get_accounts() == {"1234567890": "1234567890 – Home"}
         await client.select_account("1234567890")
         account = await client.get_account()
-        assert account.amount_due == 182.45
+        assert account.amount_due == 48.75
 
         history = await client.get_usage(account.service_agreements[0])
         assert history is not None and history.unit == "kWh"

@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-09
+
+First stable release, checked against a real MDU account.
+
+### Added
+- Last payment amount and Last payment date sensors (the latest completed
+  payment).
+- Autopay and Budget Pay binary sensors (diagnostic).
+- A monthly bill cost statistic (`mdu:<account>_bill_cost`, USD) for the
+  Energy dashboard's cost tracking.
+- Download diagnostics, with credentials, cookies, account and service
+  numbers and addresses removed.
+- Icons: a flame for gas usage, a bolt for electric, and icons for the
+  billing sensors.
+
+### Fixed
+- Last bill amount showed $0 once the bill was paid, and Amount due showed
+  Unknown. MDU's account-level figure is what's still owed on the last bill,
+  and it has no account-wide amount due; both now come from the latest bill.
+- Closed services (an old address, for example) no longer get usage sensors
+  or statistics.
+
 ## [0.1.5] - 2026-10-09
 
 ### Fixed

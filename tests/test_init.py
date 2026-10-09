@@ -35,7 +35,7 @@ def entry(hass: HomeAssistant) -> MockConfigEntry:
 @pytest.fixture
 def client():
     account = parse_account(load_fixture("session_user.json")["selectedAccount"])
-    electric, gas = account.service_agreements
+    electric, gas, _closed = account.service_agreements
     usage = {
         electric.sa_id: parse_usage(electric, load_fixture("usage_electric.json")["object"], TODAY),
         gas.sa_id: parse_usage(gas, load_fixture("usage_gas.json")["object"], TODAY),
@@ -61,8 +61,17 @@ async def test_setup_creates_sensors_and_statistics(
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.get("sensor.mdu_home_amount_due").state == "182.45"
-    assert hass.states.get("sensor.mdu_home_due_date").state == "2026-10-08"
+    assert hass.states.get("sensor.mdu_home_account_balance").state == "0.0"
+    assert hass.states.get("sensor.mdu_home_amount_due").state == "48.75"
+    assert hass.states.get("sensor.mdu_home_last_bill_amount").state == "48.75"
+    assert hass.states.get("sensor.mdu_home_due_date").state == "2026-10-02"
+    assert hass.states.get("sensor.mdu_home_last_payment_amount").state == "48.75"
+    assert hass.states.get("sensor.mdu_home_last_payment_date").state == "2026-10-01"
+    assert hass.states.get("binary_sensor.mdu_home_autopay").state == "on"
+    assert hass.states.get("binary_sensor.mdu_home_budget_pay").state == "off"
+
+    # The closed service is skipped: no usage request, no sensor.
+    assert {call.args[0].sa_id for call in client.get_usage.await_args_list} == {"5550001", "5550002"}
 
     electric = hass.states.get("sensor.mdu_home_electric_usage_last_month")
     assert electric.state == "830.0"
@@ -107,6 +116,36 @@ async def test_setup_creates_sensors_and_statistics(
     )
     assert stats[stat_id][-1]["sum"] == pytest.approx(rows[-1]["sum"])
     client.logout.assert_awaited()
+
+    cost_id = "mdu:1234567890_bill_cost"
+    cost = await hass.async_add_executor_job(
+        statistics_during_period,
+        hass,
+        dt_util.as_utc(dt_util.parse_datetime("2020-01-01T00:00:00+00:00")),
+        None,
+        {cost_id},
+        "hour",
+        None,
+        {"state", "sum"},
+    )
+    assert [row["state"] for row in cost[cost_id]] == [61.2, 48.75]
+    assert cost[cost_id][-1]["sum"] == pytest.approx(109.95)
+    assert hass.states.get("sensor.mdu_home_last_bill_amount").attributes["statistic_id"] == cost_id
+
+
+async def test_diagnostics_are_redacted(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:
+    import json
+
+    from custom_components.mdu.diagnostics import async_get_config_entry_diagnostics
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    result = await async_get_config_entry_diagnostics(hass, entry)
+    text = json.dumps(result)  # must be plain JSON
+    for secret in ("hunter2", "donavan", "1234567890", "5550001", "7770001", "MAIN ST"):
+        assert secret not in text
+    assert result["account"]["bills"][-1]["amount"] == 48.75
+    assert result["account"]["bills"][-1]["bill_date"] == "2026-09-10"
 
 
 async def test_mfa_required_starts_reauth(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:

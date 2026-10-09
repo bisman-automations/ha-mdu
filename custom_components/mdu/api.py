@@ -93,10 +93,31 @@ class ServiceAgreement:
     premise_id: str
     address: str | None = None
     status: str | None = None
+    sa_type: str | None = None
+    active: bool = True
 
     @property
     def key(self) -> str:
         return f"{self.sa_id}_{self.premise_id}"
+
+
+@dataclass(frozen=True)
+class Bill:
+    """One bill from the account's bill history."""
+
+    bill_date: date
+    amount: float | None = None
+    amount_due: float | None = None
+    due_date: date | None = None
+
+
+@dataclass(frozen=True)
+class Payment:
+    """One payment from the account's payment history."""
+
+    payment_date: date
+    amount: float | None = None
+    status: str | None = None
 
 
 @dataclass
@@ -107,11 +128,39 @@ class MDUAccount:
     description: str | None = None
     status: str | None = None
     account_balance: float | None = None
-    amount_due: float | None = None
-    last_bill_amount: float | None = None
-    last_bill_date: date | None = None
-    due_date: date | None = None
+    autopay: bool | None = None
+    budget_pay: bool | None = None
+    bills: list[Bill] = field(default_factory=list)  # oldest first
+    payments: list[Payment] = field(default_factory=list)  # oldest first
     service_agreements: list[ServiceAgreement] = field(default_factory=list)
+
+    @property
+    def last_bill(self) -> Bill | None:
+        return self.bills[-1] if self.bills else None
+
+    @property
+    def last_bill_amount(self) -> float | None:
+        return self.last_bill.amount if self.last_bill else None
+
+    @property
+    def amount_due(self) -> float | None:
+        """The amount due on the latest bill (MDU has no account-wide figure)."""
+        return self.last_bill.amount_due if self.last_bill else None
+
+    @property
+    def last_bill_date(self) -> date | None:
+        return self.last_bill.bill_date if self.last_bill else None
+
+    @property
+    def due_date(self) -> date | None:
+        return self.last_bill.due_date if self.last_bill else None
+
+    @property
+    def last_payment(self) -> Payment | None:
+        """The latest completed payment, or the latest payment of any kind."""
+        completed = [p for p in self.payments if (p.status or "").upper().startswith("C")]
+        candidates = completed or self.payments
+        return candidates[-1] if candidates else None
 
 
 @dataclass(frozen=True)
@@ -604,36 +653,74 @@ def usage_unit(gl_division: str | None, sa_type: str | None) -> str:
 
 
 def parse_account(selected: dict[str, Any]) -> MDUAccount:
-    """Build an MDUAccount from the portal's ``selectedAccount``."""
-    bills = [b for b in selected.get("bills") or [] if isinstance(b, dict)]
-    bills.sort(key=lambda b: parse_date(b.get("billDate")) or date.min)
-    latest = bills[-1] if bills else {}
+    """Build an MDUAccount from the portal's ``selectedAccount``.
+
+    Amounts come from the bill history: the account-level
+    ``lastBillAmountDue`` is what is still owed on the last bill (0 once
+    paid), and there is no account-level ``amountDue``.
+    """
+    bills = []
+    for raw in selected.get("bills") or []:
+        if isinstance(raw, dict) and (bill_date := parse_date(raw.get("billDate"))):
+            bills.append(
+                Bill(
+                    bill_date=bill_date,
+                    amount=parse_money(raw.get("amount")),
+                    amount_due=parse_money(raw.get("amountDue")),
+                    due_date=parse_date(raw.get("dueDate")),
+                )
+            )
+    bills.sort(key=lambda b: b.bill_date)
+
+    payments = []
+    for raw in selected.get("payments") or []:
+        if isinstance(raw, dict) and (paid := parse_date(raw.get("paymentDate"))):
+            payments.append(
+                Payment(payment_date=paid, amount=parse_money(raw.get("paymentAmount")), status=raw.get("paymentStatus"))
+            )
+    payments.sort(key=lambda p: p.payment_date)
 
     agreements = []
     for sa in selected.get("saList") or []:
         if not isinstance(sa, dict) or sa.get("id") in (None, ""):
             continue
         premise = sa.get("premise") or {}
+        status = (sa.get("status") or "").strip() or None
         agreements.append(
             ServiceAgreement(
                 sa_id=str(sa["id"]),
                 premise_id=str(premise.get("id") or ""),
                 address=_address(premise.get("address")),
-                status=sa.get("status"),
+                status=status,
+                sa_type=(sa.get("type") or "").strip() or None,
+                active=_is_active(sa.get("active"), status),
             )
         )
 
     return MDUAccount(
         account_id=str(selected.get("accountId") or ""),
-        description=selected.get("accountDescription"),
+        description=(selected.get("accountDescription") or "").strip() or None,
         status=selected.get("status") or selected.get("genericStatus"),
         account_balance=parse_money(selected.get("accountBalance")),
-        amount_due=parse_money(selected.get("amountDue")),
-        last_bill_amount=parse_money(selected.get("lastBillAmountDue")),
-        last_bill_date=parse_date(latest.get("billDate")),
-        due_date=parse_date(latest.get("dueDate")),
+        autopay=_enrolled(selected.get("autopay")),
+        budget_pay=_enrolled(selected.get("budgetPay")),
+        bills=bills,
+        payments=payments,
         service_agreements=agreements,
     )
+
+
+def _enrolled(value: Any) -> bool | None:
+    if isinstance(value, dict) and isinstance(value.get("enrolled"), bool):
+        return value["enrolled"]
+    return None
+
+
+def _is_active(active: Any, status: str | None) -> bool:
+    """Return whether a service agreement is still in service."""
+    if isinstance(active, bool):
+        return active
+    return not (status or "").lower().startswith(("c", "stop", "inact"))
 
 
 def parse_usage(agreement: ServiceAgreement, obj: dict[str, Any], today: date) -> UsageHistory:

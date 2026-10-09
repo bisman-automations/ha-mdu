@@ -15,7 +15,7 @@ from .api import MDUClient
 from .const import CONF_HOST, CONF_PASSWORD, CONF_TRUSTED_COOKIES, CONF_USERNAME, DEFAULT_HOST
 from .coordinator import MDUCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type MDUConfigEntry = ConfigEntry[MDUCoordinator]
 
