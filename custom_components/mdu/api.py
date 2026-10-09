@@ -188,6 +188,7 @@ class MDUClient:
                 # What a browser sends with this form; some portals and
                 # firewalls refuse form posts without them.
                 headers={
+                    self._csrf_header: self._csrf,
                     "Origin": self.base_url,
                     "Referer": f"{self.base_url}/login",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -768,9 +769,9 @@ def _address(value: Any) -> str | None:
             if isinstance(value.get(key), str) and value[key].strip():
                 return value[key].strip()
         parts = [
-            value.get(k)
+            str(value[k]).strip()
             for k in ("address1", "addressLine1", "street", "city", "state", "postal", "zip")
-            if value.get(k)
+            if value.get(k) and str(value[k]).strip()
         ]
-        return ", ".join(str(p) for p in parts) or None
+        return ", ".join(parts) or None
     return str(value)

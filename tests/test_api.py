@@ -22,7 +22,7 @@ BASE = "https://customer.montana-dakota.com"
 
 @pytest.fixture
 async def client():
-    session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar())
+    session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(quote_cookie=False))
     yield MDUClient(session, "donavan", "hunter2")
     await session.close()
 
@@ -262,3 +262,22 @@ def test_describe_page() -> None:
     html = "<html><head><title>Request Rejected</title><script>var x=1;</script></head><body><h1>The requested URL was rejected.</h1><p>{{ strings.x }}</p></body></html>"
     assert describe_page(html) == '"Request Rejected" The requested URL was rejected.'
     assert describe_page("") == "(no text, 0 bytes)"
+
+
+async def test_create_client_does_not_quote_cookies(hass) -> None:
+    """Base64 session cookies must go back exactly as the portal set them."""
+    from http.cookies import SimpleCookie
+
+    from custom_components.mdu import create_client
+
+    client = create_client(hass, {"username": "u", "password": "p"}, auto_cleanup=False)
+    url = aiohttp.client.URL(BASE)
+    client._session.cookie_jar.update_cookies(SimpleCookie("SESSION=YmFkZjAwZA==; Path=/"), url)
+    assert client._session.cookie_jar.filter_cookies(url)["SESSION"].coded_value == "YmFkZjAwZA=="
+    await client.close()
+
+
+def test_address_parts_are_trimmed() -> None:
+    from custom_components.mdu.api import _address
+
+    assert _address({"street": "123 MAIN ST      ", "city": "BISMARCK  ", "state": "ND"}) == "123 MAIN ST, BISMARCK, ND"

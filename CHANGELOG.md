@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-09
+
+### Fixed
+- Sign-in failed for everyone ("MDU rejected the username or password", or
+  an empty page in the logs). aiohttp wraps cookie values containing `=` in
+  quotes when sending them back, so the portal didn't recognize its own
+  session cookie and dropped the sign-in. Cookies are now sent exactly as the
+  portal set them.
+- The sign-in form also carries its security token as a header, the way the
+  portal's own pages send it.
+- Service addresses no longer include the portal's trailing padding.
+
 ## [0.1.4] - 2026-10-09
 
 ### Fixed
@@ -41,10 +53,8 @@ All notable changes to this project are documented here. The format follows
 ## [0.1.1] - 2026-10-09
 
 ### Fixed
-- Signing in with MFA turned on reported "MDU rejected the username or
-  password". The portal shows the security-code page at the sign-in address,
-  so sign-in is now judged by what the session can do (load the account list,
-  or answer the MFA check) instead of by the address it lands on. A page the
+- Sign-in is judged by what the session can do (load the account list, or
+  answer the MFA check) instead of only by the address it lands on. A page the
   integration doesn't recognize is reported as a connection problem, not a
   wrong password.
 - The portal's trusted-device cookie (`mfa-token`) is always kept, so a

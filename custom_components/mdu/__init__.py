@@ -28,7 +28,12 @@ def create_client(hass: HomeAssistant, data: dict, auto_cleanup: bool = True) ->
     call ``client.close()`` themselves.
     """
     # The portal is session-cookie based, so each entry needs a private jar.
-    session = async_create_clientsession(hass, auto_cleanup=auto_cleanup, cookie_jar=aiohttp.CookieJar())
+    # quote_cookie=False: aiohttp otherwise sends values containing "=" (base64
+    # session and load-balancer cookies) wrapped in quotes, the server doesn't
+    # recognise its own session, and sign-in silently fails.
+    session = async_create_clientsession(
+        hass, auto_cleanup=auto_cleanup, cookie_jar=aiohttp.CookieJar(quote_cookie=False)
+    )
     client = MDUClient(
         session,
         data[CONF_USERNAME],
