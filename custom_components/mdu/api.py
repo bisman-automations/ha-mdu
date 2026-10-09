@@ -185,11 +185,20 @@ class MDUClient:
                     "password": self._password,
                     "_csrf": self._csrf,
                 },
+                # What a browser sends with this form; some portals and
+                # firewalls refuse form posts without them.
+                headers={
+                    "Origin": self.base_url,
+                    "Referer": f"{self.base_url}/login",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
                 allow_redirects=True,
                 timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
             ) as resp:
                 html = await resp.text()
                 final = resp.url
+                status = resp.status
+                hops = [f"{r.status} {r.url.path}" for r in resp.history]
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise MDUConnectionError(f"Sign-in request failed: {err}") from err
 
@@ -198,7 +207,12 @@ class MDUClient:
         has_mfa_view = "MfaController" in html
         has_login_form = 'id="login-form"' in html or "LoginCtrl" in html
         _LOGGER.debug(
-            "Sign-in landed on %s (code page: %s, sign-in form: %s)", final.path, has_mfa_view, has_login_form
+            "Sign-in landed on %s with HTTP %s via %s (code page: %s, sign-in form: %s)",
+            final.path,
+            status,
+            hops or "no redirects",
+            has_mfa_view,
+            has_login_form,
         )
 
         # The portal may show the security-code page at /login itself, so the
@@ -218,7 +232,10 @@ class MDUClient:
 
         if has_login_form or "error" in final.query:
             raise MDUAuthenticationError("MDU rejected the username or password")
-        raise MDUConnectionError(f"Sign-in ended on an unexpected page: {final.path}")
+        raise MDUConnectionError(
+            f"Sign-in ended on an unexpected page: {final.path} (HTTP {status}, "
+            f"redirects: {', '.join(hops) or 'none'}, page: {describe_page(html)})"
+        )
 
     async def mfa_contacts(self) -> list[str]:
         """Return the email addresses and phone numbers a code can go to."""
@@ -498,6 +515,19 @@ class MDUClient:
 # ----------------------------------------------------------------------
 # Parsing
 # ----------------------------------------------------------------------
+
+
+def describe_page(html: str, limit: int = 200) -> str:
+    """Summarise a page for the log: its title and the start of its text."""
+    title = re.search(r"<title[^>]*>(.*?)</title>", html or "", re.I | re.S)
+    body = re.sub(r"(?is)<(script|style|template|title)[^>]*>.*?</\1>", " ", html or "")
+    body = re.sub(r"(?s)<[^>]+>", " ", body)
+    body = re.sub(r"\{\{.*?\}\}", " ", body)  # unrendered AngularJS bindings
+    text = " ".join(body.split())
+    head = f'"{title.group(1).strip()}" ' if title else ""
+    if not text:
+        return f"{head}(no text, {len(html or '')} bytes)"
+    return f"{head}{text[:limit]}{'…' if len(text) > limit else ''}"
 
 
 TRUST_COOKIE = "mfa-token"

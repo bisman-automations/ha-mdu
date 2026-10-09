@@ -203,3 +203,11 @@ async def test_mfa_token_kept_without_expiry(client: MDUClient) -> None:
     client.import_trusted_cookies({"mfa-token": {"value": "tok", "domain": "", "path": "/"}})
     client.clear_session()
     assert client.export_trusted_cookies()["mfa-token"]["value"] == "tok"
+
+
+def test_describe_page() -> None:
+    from custom_components.mdu.api import describe_page
+
+    html = "<html><head><title>Request Rejected</title><script>var x=1;</script></head><body><h1>The requested URL was rejected.</h1><p>{{ strings.x }}</p></body></html>"
+    assert describe_page(html) == '"Request Rejected" The requested URL was rejected.'
+    assert describe_page("") == "(no text, 0 bytes)"

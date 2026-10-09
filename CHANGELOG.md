@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-09
+
+### Changed
+- The sign-in form is posted with the `Origin` and `Referer` headers a browser
+  sends, in case the portal or its firewall refuses posts without them.
+- When sign-in ends on a page the integration doesn't recognise, the log says
+  the HTTP status, the redirects taken, and the page's title and opening text.
+
 ## [0.1.2] - 2026-10-09
 
 ### Fixed
