@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/dark_logo.png">
+    <img src="assets/logo.png" alt="Montana-Dakota Utilities for Home Assistant" width="448">
+  </picture>
+</p>
+
 # Montana-Dakota Utilities for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)

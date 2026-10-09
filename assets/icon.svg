@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E3A8A"/>
+      <stop offset="0.62" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect x="0" y="0" width="512" height="512" rx="112"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect x="0" y="0" width="512" height="512" fill="url(#sky)"/>
+    <!-- prairie: far ridge, then near rolling hill -->
+    <path d="M0 382 C 90 342, 170 350, 256 372 S 420 352, 512 330 L512 512 L0 512 Z" fill="#4ADE80"/>
+    <path d="M0 412 C 110 372, 220 388, 300 404 S 450 392, 512 374 L512 512 L0 512 Z" fill="#15803D"/>
+  </g>
+  <!-- lightning bolt (electric) -->
+  <path d="M214 92 L118 252 L182 252 L156 352 L270 194 L204 194 L240 92 Z"
+        fill="#FBBF24" stroke="#FBBF24" stroke-width="14" stroke-linejoin="round"/>
+  <!-- flame (natural gas) -->
+  <path d="M352 118 C 352 118 432 196 432 268 C 432 316 396 352 350 352 C 304 352 270 318 270 274
+           C 270 236 292 210 308 196 C 306 226 320 244 336 248 C 326 200 340 156 352 118 Z"
+        fill="#F97316"/>
+  <path d="M356 222 C 374 256 398 280 398 312 C 398 336 377 350 351 350 C 325 350 306 334 306 311
+           C 306 289 319 274 332 263 C 332 280 340 291 350 294 C 343 268 345 246 356 222 Z"
+        fill="#FDE68A"/>
+</svg>
