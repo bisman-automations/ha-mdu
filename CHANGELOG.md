@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-09
+
+### Fixed
+- The integration closed its Home Assistant HTTP session, which also shut
+  down the connection pool Home Assistant shares between integrations. Later
+  sign-in attempts then failed with "Couldn't reach MDU" until a restart.
+  Sessions are now detached, as Home Assistant requires.
+
 ## [0.1.1] - 2026-10-09
 
 ### Fixed

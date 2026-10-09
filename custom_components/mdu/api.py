@@ -303,9 +303,13 @@ class MDUClient:
             self._session.cookie_jar.update_cookies({name: morsel}, URL(self.base_url))
 
     async def close(self) -> None:
-        """Close the HTTP session this client owns."""
+        """Release this client's HTTP session.
+
+        Home Assistant sessions are detached, never closed: closing would shut
+        down the connector Home Assistant shares between integrations.
+        """
         if not self._session.closed:
-            await self._session.close()
+            self._session.detach()
 
     def clear_session(self) -> None:
         """Drop the session cookies, keeping the persistent (trusted) ones."""

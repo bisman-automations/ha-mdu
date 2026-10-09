@@ -189,7 +189,7 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.source == SOURCE_REAUTH:
             # Keep the trusted-device cookies, so MDU may skip the code.
             data[CONF_TRUSTED_COOKIES] = self._get_reauth_entry().data.get(CONF_TRUSTED_COOKIES)
-        return create_client(self.hass, data)
+        return create_client(self.hass, data, auto_cleanup=False)
 
     async def _async_sign_in(self, errors: dict[str, str]) -> ConfigFlowResult | None:
         """Sign in; return the next step, or None with ``errors`` filled in."""

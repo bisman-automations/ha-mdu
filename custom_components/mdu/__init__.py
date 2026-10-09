@@ -20,10 +20,15 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 type MDUConfigEntry = ConfigEntry[MDUCoordinator]
 
 
-def create_client(hass: HomeAssistant, data: dict) -> MDUClient:
-    """Return a client with its own cookie jar and any saved trusted-device cookies."""
+def create_client(hass: HomeAssistant, data: dict, auto_cleanup: bool = True) -> MDUClient:
+    """Return a client with its own cookie jar and any saved trusted-device cookies.
+
+    With ``auto_cleanup`` (the default, for entry setup) Home Assistant
+    detaches the session when the entry unloads. Config flows pass False and
+    call ``client.close()`` themselves.
+    """
     # The portal is session-cookie based, so each entry needs a private jar.
-    session = async_create_clientsession(hass, cookie_jar=aiohttp.CookieJar())
+    session = async_create_clientsession(hass, auto_cleanup=auto_cleanup, cookie_jar=aiohttp.CookieJar())
     client = MDUClient(
         session,
         data[CONF_USERNAME],
