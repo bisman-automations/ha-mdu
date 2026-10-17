@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Statistics always use the current recorder metadata (`mean_type`,
+  `unit_class`). The fallback for Home Assistant versions older than the
+  minimum used the `has_mean` form that Home Assistant 2026.11 removes.
+
+### Maintenance
+- Tests run on Python 3.13 and 3.14, so CI covers current Home Assistant
+  releases (newer test packages need Python 3.14).
+- Portal tests use a fake MDU portal on a local test server instead of the
+  `aioresponses` library, which doesn't work with aiohttp 3.14 (shipped with
+  Home Assistant 2026.10). Cookies and redirects are now exercised over real
+  HTTP, including a regression test for unquoted session cookies.
+
 ## [1.0.0] - 2026-10-09
 
 First stable release, checked against a real MDU account.

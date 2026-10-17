@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 import logging
 
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
+from homeassistant.components.recorder.models import StatisticData, StatisticMeanType, StatisticMetaData
 from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
@@ -17,11 +17,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-
-try:
-    from homeassistant.components.recorder.models import StatisticMeanType
-except ImportError:  # Home Assistant before 2025.10
-    StatisticMeanType = None  # type: ignore[assignment,misc]
 
 from .api import MDUAccount, MDUClient, UsageHistory
 from .const import (
@@ -222,20 +217,17 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
             total += value
             statistics.append(StatisticData(start=_month_start(month), state=value, sum=round(total, 4)))
 
-        metadata_kwargs: dict = {
-            "has_sum": True,
-            "name": name,
-            "source": DOMAIN,
-            "statistic_id": stat_id,
-            "unit_of_measurement": unit,
-        }
-        if StatisticMeanType is not None:
-            metadata_kwargs["mean_type"] = StatisticMeanType.NONE
-            metadata_kwargs["unit_class"] = unit_class
-        else:
-            metadata_kwargs["has_mean"] = False
+        metadata = StatisticMetaData(
+            has_sum=True,
+            mean_type=StatisticMeanType.NONE,
+            name=name,
+            source=DOMAIN,
+            statistic_id=stat_id,
+            unit_class=unit_class,
+            unit_of_measurement=unit,
+        )
         _LOGGER.debug("Writing %d monthly statistics to %s", len(statistics), stat_id)
-        async_add_external_statistics(self.hass, StatisticMetaData(**metadata_kwargs), statistics)
+        async_add_external_statistics(self.hass, metadata, statistics)
 
 
 def _month_start(month: date) -> datetime:

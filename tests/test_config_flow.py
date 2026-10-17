@@ -1,5 +1,5 @@
 """Tests for the MDU config flow."""
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant import config_entries
@@ -21,7 +21,7 @@ COOKIES = {"TRUSTED_DEVICE": {"value": "abc", "domain": "", "path": "/", "max-ag
 
 
 @pytest.fixture
-def client() -> Generator[MagicMock]:
+async def client(hass: HomeAssistant) -> AsyncGenerator[MagicMock]:
     client = MagicMock()
     client.login = AsyncMock()
     client.logout = AsyncMock()
@@ -34,8 +34,12 @@ def client() -> Generator[MagicMock]:
     with (
         patch("custom_components.mdu.create_client", return_value=client),
         patch("custom_components.mdu.async_setup_entry", return_value=True),
+        patch("custom_components.mdu.async_unload_entry", return_value=True),
     ):
         yield client
+        # Unload while setup is still stubbed: these entries never got runtime data.
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            await hass.config_entries.async_unload(entry.entry_id)
 
 
 async def _start(hass: HomeAssistant) -> dict:
