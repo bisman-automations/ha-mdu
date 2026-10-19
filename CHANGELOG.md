@@ -6,7 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-18
+
 ### Changed
+- The HACS check now runs every validation, including the brand icon, so the integration can be listed in the HACS catalog.
 - Statistics always use the current recorder metadata (`mean_type`,
   `unit_class`). The fallback for Home Assistant versions older than the
   minimum used the `has_mean` form that Home Assistant 2026.11 removes.
