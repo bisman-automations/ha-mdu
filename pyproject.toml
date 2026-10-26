@@ -1,14 +1,34 @@
+# Tool settings only: this repo isn't a Python package, and the version lives
+# in custom_components/mdu/manifest.json. The pytest, ruff and coverage
+# settings follow bisman-automations/.github templates/repo/pyproject.toml;
+# anything repo-specific is marked.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+# The tests import the integration as a top-level package too.
+pythonpath = [".", "custom_components"]
+
 [tool.ruff]
+# The oldest Python the minimum Home Assistant in hacs.json runs on.
 target-version = "py313"
-line-length = 120
+line-length = 88
 
 [tool.ruff.lint]
-# Errors and likely bugs only; the existing code style (indentation, f-string
-# logging) is left as-is rather than reformatted wholesale.
-select = ["E9", "F", "B", "I"]
-ignore = ["B905"]
+select = ["B", "E", "F", "I", "UP", "W"]
+ignore = ["B905", "E501"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
-known-first-party = ["custom_components"]
+known-first-party = ["custom_components", "homeassistant", "tests"]
 combine-as-imports = true
+split-on-trailing-comma = false
+
+[tool.coverage.run]
+source = ["custom_components/mdu"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

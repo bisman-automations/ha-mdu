@@ -1,28 +1,24 @@
+# Validate: hassfest, the HACS checks, and the bisman-automations standards
+# check (layout, CHANGELOG, README, CLAUDE.md). Shared workflow:
+# https://github.com/bisman-automations/.github (.github/workflows/ha-validate.yml).
 name: Validate
 
 on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, to catch new hassfest and HACS rules.
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * 4"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  hassfest:
-    name: Hassfest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: home-assistant/actions/hassfest@master
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-  hacs:
-    name: HACS
-    runs-on: ubuntu-latest
-    steps:
-      - uses: hacs/action@main
-        with:
-          category: integration
+jobs:
+  validate:
+    uses: bisman-automations/.github/.github/workflows/ha-validate.yml@main
