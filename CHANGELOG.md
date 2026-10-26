@@ -1,20 +1,20 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
-[Semantic Versioning](https://semver.org/).
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ## [1.0.1] - 2026-10-18
 
 ### Changed
+
 - The HACS check now runs every validation, including the brand icon, so the integration can be listed in the HACS catalog.
 - Statistics always use the current recorder metadata (`mean_type`,
   `unit_class`). The fallback for Home Assistant versions older than the
   minimum used the `has_mean` form that Home Assistant 2026.11 removes.
-
-### Maintenance
 - Tests run on Python 3.13 and 3.14, so CI covers current Home Assistant
   releases (newer test packages need Python 3.14).
 - Portal tests use a fake MDU portal on a local test server instead of the
@@ -27,6 +27,7 @@ All notable changes to this project are documented here. The format follows
 First stable release, checked against a real MDU account.
 
 ### Added
+
 - Last payment amount and Last payment date sensors (the latest completed
   payment).
 - Autopay and Budget Pay binary sensors (diagnostic).
@@ -38,6 +39,7 @@ First stable release, checked against a real MDU account.
   billing sensors.
 
 ### Fixed
+
 - Last bill amount showed $0 once the bill was paid, and Amount due showed
   Unknown. MDU's account-level figure is what's still owed on the last bill,
   and it has no account-wide amount due; both now come from the latest bill.
@@ -47,6 +49,7 @@ First stable release, checked against a real MDU account.
 ## [0.1.5] - 2026-10-09
 
 ### Fixed
+
 - Sign-in failed for everyone ("MDU rejected the username or password", or
   an empty page in the logs). aiohttp wraps cookie values containing `=` in
   quotes when sending them back, so the portal didn't recognize its own
@@ -58,19 +61,22 @@ First stable release, checked against a real MDU account.
 
 ## [0.1.4] - 2026-10-09
 
+### Changed
+
+- If sign-in still can't be understood, the log includes the response
+  headers (cookie names only, never values) and the follow-up page.
+
 ### Fixed
+
 - The portal can answer the sign-in form with an empty page. The integration
   now does what a browser would: follows a `Refresh` or `Location` header if
   there is one, otherwise loads the next page, and decides from there whether
   sign-in worked, needs a security code, or was refused.
 
-### Changed
-- If sign-in still can't be understood, the log includes the response
-  headers (cookie names only, never values) and the follow-up page.
-
 ## [0.1.3] - 2026-10-09
 
 ### Changed
+
 - The sign-in form is posted with the `Origin` and `Referer` headers a browser
   sends, in case the portal or its firewall refuses posts without them.
 - When sign-in ends on a page the integration doesn't recognise, the log says
@@ -78,19 +84,22 @@ First stable release, checked against a real MDU account.
 
 ## [0.1.2] - 2026-10-09
 
+### Changed
+
+- Sign-in problems during setup are logged as warnings with the reason, so
+  they show in Home Assistant's logs without debug logging.
+
 ### Fixed
+
 - The integration closed its Home Assistant HTTP session, which also shut
   down the connection pool Home Assistant shares between integrations. Later
   sign-in attempts then failed with "Couldn't reach MDU" until a restart.
   Sessions are now detached, as Home Assistant requires.
 
-### Changed
-- Sign-in problems during setup are logged as warnings with the reason, so
-  they show in Home Assistant's logs without debug logging.
-
 ## [0.1.1] - 2026-10-09
 
 ### Fixed
+
 - Sign-in is judged by what the session can do (load the account list, or
   answer the MFA check) instead of only by the address it lands on. A page the
   integration doesn't recognize is reported as a connection problem, not a
@@ -101,6 +110,7 @@ First stable release, checked against a real MDU account.
 ## [0.1.0] - 2026-10-09
 
 ### Added
+
 - First release. Signs in to MDU Online Account Services, with support for
   security codes by email or text (the connection is then trusted, so codes
   aren't asked for again).
@@ -110,3 +120,13 @@ First stable release, checked against a real MDU account.
   dekatherms) service, showing the most recent billed month.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
+
+[Unreleased]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.5...v1.0.0
+[0.1.5]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/bisman-automations/ha-mdu/releases/tag/v0.1.0

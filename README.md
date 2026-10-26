@@ -1,14 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/dark_logo.png">
-    <img src="assets/logo.png" alt="Montana-Dakota Utilities for Home Assistant" width="448">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/bisman-automations/ha-mdu/main/assets/dark_logo.png">
+    <img src="https://raw.githubusercontent.com/bisman-automations/ha-mdu/main/assets/logo.png" alt="Montana-Dakota Utilities for Home Assistant" width="448">
   </picture>
 </p>
 
 # Montana-Dakota Utilities for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![Version](https://img.shields.io/github/v/release/bisman-automations/ha-mdu)](https://github.com/bisman-automations/ha-mdu/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11%2B-blue.svg)](https://www.home-assistant.io/)
+[![GitHub Release](https://img.shields.io/github/v/release/bisman-automations/ha-mdu)](https://github.com/bisman-automations/ha-mdu/releases)
+[![Test](https://github.com/bisman-automations/ha-mdu/actions/workflows/test.yml/badge.svg)](https://github.com/bisman-automations/ha-mdu/actions/workflows/test.yml)
+[![Validate](https://github.com/bisman-automations/ha-mdu/actions/workflows/validate.yml/badge.svg)](https://github.com/bisman-automations/ha-mdu/actions/workflows/validate.yml)
 [![License](https://img.shields.io/github/license/bisman-automations/ha-mdu)](LICENSE)
 
 A Home Assistant custom integration for [Montana-Dakota Utilities](https://www.montana-dakota.com/) (MDU) customers. It signs in to MDU Online Account Services and brings your monthly electric and gas usage, balance and bill dates into Home Assistant, including the Energy dashboard.
@@ -58,20 +61,22 @@ Usage covers every billed month MDU shows (about two years). Bills cover the who
 
 ## Installation
 
-### HACS (recommended)
+### HACS
 
-1. In HACS, open the three-dot menu and choose **Custom repositories**.
-2. Add `https://github.com/bisman-automations/ha-mdu` with the category **Integration**.
-3. Search for **Montana-Dakota Utilities** and download it.
-4. Restart Home Assistant.
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bisman-automations&repository=ha-mdu&category=integration)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bisman-automations&repository=ha-mdu)
+1. Click the button above, or in HACS open the menu, choose **Custom repositories**, and add `https://github.com/bisman-automations/ha-mdu` as an **Integration**.
+2. Download **Montana-Dakota Utilities** and restart Home Assistant.
+
+Requires **Home Assistant 2025.11 or newer**.
 
 ### Manual
 
-Copy `custom_components/mdu` into your Home Assistant `config/custom_components` folder and restart.
+Download `mdu.zip` from the [latest release](https://github.com/bisman-automations/ha-mdu/releases/latest), unzip it into `config/custom_components/mdu/`, and restart Home Assistant.
 
 ## Setup
+
+[![Open your Home Assistant instance and start setting up Montana-Dakota Utilities.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=mdu)
 
 1. Go to **Settings → Devices & services → Add integration** and search for **Montana-Dakota Utilities**.
 2. Enter your MDU Online Account Services username and password.
@@ -127,6 +132,13 @@ On setup the integration imports every month MDU shows: about two years of usage
 - **Unit**: kWh for electric usage, GJ for gas usage (the original Dk value is in the `source_value` attribute)
 - **Icon**: Lightning bolt (mdi:flash) for electric usage, flame (mdi:fire) for gas usage
 
+## How it works
+
+The MDU portal is an Oracle CC&B self-service site. The integration signs in with the portal's own form (with its CSRF token), answers MFA the way the portal does with "trust this device" on, opens the configured account, and reads:
+
+- `GET /session/user` for the balance, bills and service agreements
+- `POST /usage-history` for each service agreement's monthly usage
+
 ## Troubleshooting
 
 Turn on debug logging to see what the integration reads from the portal:
@@ -139,12 +151,26 @@ logger:
 
 If sensors are missing or values look wrong, open an issue and attach the integration's diagnostics: **Settings → Devices & services → Montana-Dakota Utilities → ⋮ → Download diagnostics**. Your credentials, account and service numbers and addresses are removed from that file automatically.
 
-## How it works
+## Development
 
-The MDU portal is an Oracle CC&B self-service site. The integration signs in with the portal's own form (with its CSRF token), answers MFA the way the portal does with "trust this device" on, opens the configured account, and reads:
+Tests run inside a real Home Assistant through
+[pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
+You need Python 3.14 for the current Home Assistant.
 
-- `GET /session/user` for the balance, bills and service agreements
-- `POST /usage-history` for each service agreement's monthly usage
+```bash
+python3.14 -m venv .venv && . .venv/bin/activate
+pip install -r requirements_test.txt
+ruff check . && ruff format --check .
+pytest
+```
+
+To test against the oldest supported Home Assistant (2025.11), use Python 3.13 and
+`pip install -r requirements_test_min.txt` instead.
+
+CI runs the same checks on every push and pull request, on both Home Assistant
+versions, plus hassfest, HACS validation and the shared repo standards, using the
+workflows in [bisman-automations/.github](https://github.com/bisman-automations/.github).
+Releases are drafted from [CHANGELOG.md](CHANGELOG.md); see [CLAUDE.md](CLAUDE.md).
 
 ## License
 
