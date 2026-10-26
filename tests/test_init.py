@@ -1,19 +1,22 @@
 """Tests for setup, sensors and statistics."""
+
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.components.recorder.statistics import statistics_during_period
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
+from pytest_homeassistant_custom_component.components.recorder.common import (
+    async_wait_recording_done,
+)
 
 from custom_components.mdu.api import parse_account, parse_usage
 from custom_components.mdu.const import DOMAIN
 from custom_components.mdu.exceptions import MDUConnectionError, MDUMfaRequired
+from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .conftest import load_fixture
 
@@ -26,7 +29,12 @@ def entry(hass: HomeAssistant) -> MockConfigEntry:
         domain=DOMAIN,
         unique_id="1234567890",
         title="MDU 1234567890 – Home",
-        data={"username": "donavan", "password": "hunter2", "account_id": "1234567890", "trusted_cookies": {}},
+        data={
+            "username": "donavan",
+            "password": "hunter2",
+            "account_id": "1234567890",
+            "trusted_cookies": {},
+        },
     )
     entry.add_to_hass(hass)
     return entry
@@ -37,7 +45,9 @@ def client():
     account = parse_account(load_fixture("session_user.json")["selectedAccount"])
     electric, gas, _closed = account.service_agreements
     usage = {
-        electric.sa_id: parse_usage(electric, load_fixture("usage_electric.json")["object"], TODAY),
+        electric.sa_id: parse_usage(
+            electric, load_fixture("usage_electric.json")["object"], TODAY
+        ),
         gas.sa_id: parse_usage(gas, load_fixture("usage_gas.json")["object"], TODAY),
     }
     client = MagicMock()
@@ -54,7 +64,10 @@ def client():
 
 
 async def test_setup_creates_sensors_and_statistics(
-    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock, freezer: FrozenDateTimeFactory
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    client: MagicMock,
+    freezer: FrozenDateTimeFactory,
 ) -> None:
     freezer.move_to("2026-10-09 12:00:00-05:00")
     await hass.config_entries.async_setup(entry.entry_id)
@@ -71,7 +84,10 @@ async def test_setup_creates_sensors_and_statistics(
     assert hass.states.get("binary_sensor.mdu_home_budget_pay").state == "off"
 
     # The closed service is skipped: no usage request, no sensor.
-    assert {call.args[0].sa_id for call in client.get_usage.await_args_list} == {"5550001", "5550002"}
+    assert {call.args[0].sa_id for call in client.get_usage.await_args_list} == {
+        "5550001",
+        "5550002",
+    }
 
     electric = hass.states.get("sensor.mdu_home_electric_usage_last_month")
     assert electric.state == "830.0"
@@ -130,10 +146,15 @@ async def test_setup_creates_sensors_and_statistics(
     )
     assert [row["state"] for row in cost[cost_id]] == [61.2, 48.75]
     assert cost[cost_id][-1]["sum"] == pytest.approx(109.95)
-    assert hass.states.get("sensor.mdu_home_last_bill_amount").attributes["statistic_id"] == cost_id
+    assert (
+        hass.states.get("sensor.mdu_home_last_bill_amount").attributes["statistic_id"]
+        == cost_id
+    )
 
 
-async def test_diagnostics_are_redacted(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:
+async def test_diagnostics_are_redacted(
+    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock
+) -> None:
     import json
 
     from custom_components.mdu.diagnostics import async_get_config_entry_diagnostics
@@ -148,7 +169,9 @@ async def test_diagnostics_are_redacted(hass: HomeAssistant, entry: MockConfigEn
     assert result["account"]["bills"][-1]["bill_date"] == "2026-09-10"
 
 
-async def test_mfa_required_starts_reauth(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:
+async def test_mfa_required_starts_reauth(
+    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock
+) -> None:
     client.login.side_effect = MDUMfaRequired
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
@@ -157,7 +180,9 @@ async def test_mfa_required_starts_reauth(hass: HomeAssistant, entry: MockConfig
     assert [f["context"]["source"] for f in flows] == ["reauth"]
 
 
-async def test_connection_error_retries(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:
+async def test_connection_error_retries(
+    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock
+) -> None:
     client.login.side_effect = MDUConnectionError
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
@@ -165,7 +190,9 @@ async def test_connection_error_retries(hass: HomeAssistant, entry: MockConfigEn
     client.close.assert_awaited()
 
 
-async def test_unload(hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock) -> None:
+async def test_unload(
+    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock
+) -> None:
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert await hass.config_entries.async_unload(entry.entry_id)

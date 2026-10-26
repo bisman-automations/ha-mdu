@@ -1,10 +1,14 @@
 """Binary sensors for Montana-Dakota Utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorEntityDescription
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    BinarySensorEntityDescription,
+)
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -43,7 +47,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up MDU binary sensors."""
     coordinator = entry.runtime_data
-    async_add_entities(MDUBinarySensor(coordinator, description) for description in BINARY_SENSORS)
+    async_add_entities(
+        MDUBinarySensor(coordinator, description) for description in BINARY_SENSORS
+    )
 
 
 class MDUBinarySensor(MDUEntity, BinarySensorEntity):
@@ -51,7 +57,9 @@ class MDUBinarySensor(MDUEntity, BinarySensorEntity):
 
     entity_description: MDUBinarySensorDescription
 
-    def __init__(self, coordinator: MDUCoordinator, description: MDUBinarySensorDescription) -> None:
+    def __init__(
+        self, coordinator: MDUCoordinator, description: MDUBinarySensorDescription
+    ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.account_id}_{description.key}"

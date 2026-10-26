@@ -1,15 +1,14 @@
 """Config flow for Montana-Dakota Utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
 import logging
 from typing import Any
 
-from homeassistant.config_entries import (
-    SOURCE_REAUTH,
-    ConfigFlow,
-    ConfigFlowResult,
-)
+import voluptuous as vol
+
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -19,7 +18,6 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-import voluptuous as vol
 
 from .api import MDUClient
 from .const import (
@@ -69,7 +67,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
     # Steps
     # ------------------------------------------------------------------
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Ask for the portal username and password."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -87,7 +87,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
         """Start reauthentication."""
         self._username = entry_data[CONF_USERNAME]
         return await self.async_step_reauth_confirm()
@@ -125,15 +127,21 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 return await self.async_step_mfa_code()
 
-        options = [SelectOptionDict(value=c, label=mask_contact(c)) for c in self._contacts]
+        options = [
+            SelectOptionDict(value=c, label=mask_contact(c)) for c in self._contacts
+        ]
         schema = vol.Schema(
             {
-                vol.Required(CONF_MFA_CONTACT, default=self._contacts[0]): SelectSelector(
+                vol.Required(
+                    CONF_MFA_CONTACT, default=self._contacts[0]
+                ): SelectSelector(
                     SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST)
                 )
             }
         )
-        return self.async_show_form(step_id="mfa_contact", data_schema=schema, errors=errors)
+        return self.async_show_form(
+            step_id="mfa_contact", data_schema=schema, errors=errors
+        )
 
     async def async_step_mfa_code(
         self, user_input: dict[str, Any] | None = None
@@ -154,7 +162,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
                     step_id="mfa_code", data_schema=_code_schema(), errors=errors
                 )
 
-        return self.async_show_form(step_id="mfa_code", data_schema=_code_schema(), errors=errors)
+        return self.async_show_form(
+            step_id="mfa_code", data_schema=_code_schema(), errors=errors
+        )
 
     async def async_step_account(
         self, user_input: dict[str, Any] | None = None
@@ -163,7 +173,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return await self._async_finish(user_input[CONF_ACCOUNT_ID])
 
-        options = [SelectOptionDict(value=k, label=v) for k, v in self._accounts.items()]
+        options = [
+            SelectOptionDict(value=k, label=v) for k, v in self._accounts.items()
+        ]
         schema = vol.Schema(
             {
                 vol.Required(CONF_ACCOUNT_ID): SelectSelector(
@@ -189,7 +201,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         data = {CONF_USERNAME: self._username, CONF_PASSWORD: self._password}
         if self.source == SOURCE_REAUTH:
             # Keep the trusted-device cookies, so MDU may skip the code.
-            data[CONF_TRUSTED_COOKIES] = self._get_reauth_entry().data.get(CONF_TRUSTED_COOKIES)
+            data[CONF_TRUSTED_COOKIES] = self._get_reauth_entry().data.get(
+                CONF_TRUSTED_COOKIES
+            )
         return create_client(self.hass, data, auto_cleanup=False)
 
     async def _async_sign_in(self, errors: dict[str, str]) -> ConfigFlowResult | None:
@@ -224,7 +238,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             return None
         return await self._async_after_sign_in(errors)
 
-    async def _async_after_sign_in(self, errors: dict[str, str]) -> ConfigFlowResult | None:
+    async def _async_after_sign_in(
+        self, errors: dict[str, str]
+    ) -> ConfigFlowResult | None:
         """Read the accounts and move on to choosing one."""
         assert self._client is not None
         try:
@@ -260,7 +276,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(account_id)
         if self.source == SOURCE_REAUTH:
             self._abort_if_unique_id_mismatch(reason="account_missing")
-            return self.async_update_reload_and_abort(self._get_reauth_entry(), data_updates=data)
+            return self.async_update_reload_and_abort(
+                self._get_reauth_entry(), data_updates=data
+            )
 
         self._abort_if_unique_id_configured()
         label = self._accounts.get(account_id, account_id)

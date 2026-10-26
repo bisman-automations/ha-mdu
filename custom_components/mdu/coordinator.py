@@ -1,4 +1,5 @@
 """Data coordinator for Montana-Dakota Utilities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -6,7 +7,11 @@ from datetime import date, datetime, timedelta
 import logging
 
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import StatisticData, StatisticMeanType, StatisticMetaData
+from homeassistant.components.recorder.models import (
+    StatisticData,
+    StatisticMeanType,
+    StatisticMetaData,
+)
 from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
@@ -29,11 +34,7 @@ from .const import (
     UNIT_KWH,
     UPDATE_INTERVAL,
 )
-from .exceptions import (
-    MDUAuthenticationError,
-    MDUError,
-    MDUMfaRequired,
-)
+from .exceptions import MDUAuthenticationError, MDUError, MDUMfaRequired
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,7 +57,9 @@ def to_native(history: UsageHistory, value: float) -> float:
     """
     if history.unit == UNIT_KWH:
         return value
-    kwh = value * (KWH_PER_DEKATHERM if history.unit == UNIT_DEKATHERM else KWH_PER_THERM)
+    kwh = value * (
+        KWH_PER_DEKATHERM if history.unit == UNIT_DEKATHERM else KWH_PER_THERM
+    )
     return round(kwh * GJ_PER_KWH, 4)
 
 
@@ -75,7 +78,9 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: MDUClient) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, client: MDUClient
+    ) -> None:
         super().__init__(
             hass,
             _LOGGER,
@@ -116,12 +121,16 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
         usage: dict[str, UsageHistory] = {}
         for agreement in account.service_agreements:
             if not agreement.active:
-                _LOGGER.debug("Skipping closed service %s (%s)", agreement.sa_id, agreement.status)
+                _LOGGER.debug(
+                    "Skipping closed service %s (%s)", agreement.sa_id, agreement.status
+                )
                 continue
             try:
                 history = await self.client.get_usage(agreement)
             except MDUError as err:
-                _LOGGER.warning("Could not read usage for service %s: %s", agreement.sa_id, err)
+                _LOGGER.warning(
+                    "Could not read usage for service %s: %s", agreement.sa_id, err
+                )
                 continue
             if history is not None and history.months:
                 usage[agreement.key] = history
@@ -215,7 +224,11 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
         statistics: list[StatisticData] = []
         for month, value in values:
             total += value
-            statistics.append(StatisticData(start=_month_start(month), state=value, sum=round(total, 4)))
+            statistics.append(
+                StatisticData(
+                    start=_month_start(month), state=value, sum=round(total, 4)
+                )
+            )
 
         metadata = StatisticMetaData(
             has_sum=True,

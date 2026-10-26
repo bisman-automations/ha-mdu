@@ -1,4 +1,5 @@
 """Base entity for Montana-Dakota Utilities."""
+
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo

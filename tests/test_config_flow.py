@@ -1,10 +1,8 @@
 """Tests for the MDU config flow."""
+
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -16,8 +14,19 @@ from custom_components.mdu.exceptions import (
     MDUMfaError,
     MDUMfaRequired,
 )
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
-COOKIES = {"TRUSTED_DEVICE": {"value": "abc", "domain": "", "path": "/", "max-age": "100", "secure": True}}
+COOKIES = {
+    "TRUSTED_DEVICE": {
+        "value": "abc",
+        "domain": "",
+        "path": "/",
+        "max-age": "100",
+        "secure": True,
+    }
+}
 
 
 @pytest.fixture
@@ -43,7 +52,9 @@ async def client(hass: HomeAssistant) -> AsyncGenerator[MagicMock]:
 
 
 async def _start(hass: HomeAssistant) -> dict:
-    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
     assert result["type"] is FlowResultType.FORM
     return await hass.config_entries.flow.async_configure(
         result["flow_id"], {"username": "donavan", "password": "hunter2"}
@@ -71,19 +82,27 @@ async def test_mfa_then_pick_account(hass: HomeAssistant, client: MagicMock) -> 
     result = await _start(hass)
     assert result["step_id"] == "mfa_contact"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"mfa_contact": "7015551234"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"mfa_contact": "7015551234"}
+    )
     assert result["step_id"] == "mfa_code"
     client.mfa_send_code.assert_awaited_with("7015551234")
 
     client.mfa_verify.side_effect = MDUMfaError("bad", "invalid_code")
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"mfa_code": "11111"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"mfa_code": "11111"}
+    )
     assert result["errors"] == {"base": "mfa_invalid_code"}
 
     client.mfa_verify.side_effect = None
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"mfa_code": "12345"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"mfa_code": "12345"}
+    )
     assert result["step_id"] == "account"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"account_id": "222"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"account_id": "222"}
+    )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["account_id"] == "222"
     assert result["title"] == "MDU 222 – Cabin"
@@ -91,9 +110,15 @@ async def test_mfa_then_pick_account(hass: HomeAssistant, client: MagicMock) -> 
 
 @pytest.mark.parametrize(
     ("error", "key"),
-    [(MDUAuthenticationError, "invalid_auth"), (MDUConnectionError, "cannot_connect"), (RuntimeError, "unknown")],
+    [
+        (MDUAuthenticationError, "invalid_auth"),
+        (MDUConnectionError, "cannot_connect"),
+        (RuntimeError, "unknown"),
+    ],
 )
-async def test_sign_in_errors(hass: HomeAssistant, client: MagicMock, error, key) -> None:
+async def test_sign_in_errors(
+    hass: HomeAssistant, client: MagicMock, error, key
+) -> None:
     client.login.side_effect = error
     result = await _start(hass)
     assert result["type"] is FlowResultType.FORM
@@ -111,17 +136,28 @@ async def test_reauth_with_mfa(hass: HomeAssistant, client: MagicMock) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="1234567890",
-        data={"username": "donavan", "password": "old", "account_id": "1234567890", "trusted_cookies": {}},
+        data={
+            "username": "donavan",
+            "password": "old",
+            "account_id": "1234567890",
+            "trusted_cookies": {},
+        },
     )
     entry.add_to_hass(hass)
     client.login.side_effect = MDUMfaRequired
 
     result = await entry.start_reauth_flow(hass)
     assert result["step_id"] == "reauth_confirm"
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"password": "new"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"password": "new"}
+    )
     assert result["step_id"] == "mfa_contact"
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"mfa_contact": "d@example.com"})
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"mfa_code": "12345"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"mfa_contact": "d@example.com"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"mfa_code": "12345"}
+    )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"

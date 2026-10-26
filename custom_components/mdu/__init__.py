@@ -3,16 +3,24 @@
 For more details about this integration, please refer to
 https://github.com/bisman-automations/ha-mdu
 """
+
 from __future__ import annotations
 
 import aiohttp
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api import MDUClient
-from .const import CONF_HOST, CONF_PASSWORD, CONF_TRUSTED_COOKIES, CONF_USERNAME, DEFAULT_HOST
+from .const import (
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_TRUSTED_COOKIES,
+    CONF_USERNAME,
+    DEFAULT_HOST,
+)
 from .coordinator import MDUCoordinator
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
@@ -20,7 +28,9 @@ PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 type MDUConfigEntry = ConfigEntry[MDUCoordinator]
 
 
-def create_client(hass: HomeAssistant, data: dict, auto_cleanup: bool = True) -> MDUClient:
+def create_client(
+    hass: HomeAssistant, data: dict, auto_cleanup: bool = True
+) -> MDUClient:
     """Return a client with its own cookie jar and any saved trusted-device cookies.
 
     With ``auto_cleanup`` (the default, for entry setup) Home Assistant
@@ -32,7 +42,9 @@ def create_client(hass: HomeAssistant, data: dict, auto_cleanup: bool = True) ->
     # session and load-balancer cookies) wrapped in quotes, the server doesn't
     # recognise its own session, and sign-in silently fails.
     session = async_create_clientsession(
-        hass, auto_cleanup=auto_cleanup, cookie_jar=aiohttp.CookieJar(quote_cookie=False)
+        hass,
+        auto_cleanup=auto_cleanup,
+        cookie_jar=aiohttp.CookieJar(quote_cookie=False),
     )
     client = MDUClient(
         session,

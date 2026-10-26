@@ -4,6 +4,7 @@ Everything that identifies the account holder is removed: credentials,
 cookies, account and service numbers, and addresses. What remains is the
 shape of the data and the figures, which is what's needed to debug parsing.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -30,7 +31,9 @@ TO_REDACT = {
 }
 
 
-async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: MDUConfigEntry) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(
+    hass: HomeAssistant, entry: MDUConfigEntry
+) -> dict[str, Any]:
     """Return redacted diagnostics for a config entry."""
     coordinator = entry.runtime_data
     data = coordinator.data
@@ -40,7 +43,9 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: MDUConf
             "sa_type": history.sa_type,
             "gl_division": history.gl_division,
             "unit": history.unit,
-            "months": [{"month": m.month.isoformat(), "value": m.value} for m in history.months],
+            "months": [
+                {"month": m.month.isoformat(), "value": m.value} for m in history.months
+            ],
         }
         for index, history in enumerate(data.usage.values(), start=1)
     }

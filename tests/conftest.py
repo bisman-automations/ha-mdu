@@ -1,4 +1,5 @@
 """Fixtures for Montana-Dakota Utilities tests."""
+
 import json
 from pathlib import Path
 

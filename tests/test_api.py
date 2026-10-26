@@ -1,4 +1,5 @@
 """Tests for the MDU portal client against a fake portal served over real HTTP."""
+
 import re
 
 import aiohttp
@@ -33,7 +34,9 @@ async def client(portal: FakePortal):
     # unsafe=True only because the test server is on 127.0.0.1; aiohttp's jar
     # ignores cookies from IP addresses otherwise. quote_cookie=False matches
     # the integration's own session (see create_client).
-    session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True, quote_cookie=False))
+    session = aiohttp.ClientSession(
+        cookie_jar=aiohttp.CookieJar(unsafe=True, quote_cookie=False)
+    )
     client = MDUClient(session, "donavan", "hunter2")
     client.base_url = portal.url
     yield client
@@ -50,11 +53,17 @@ def _not_signed_in(portal: FakePortal) -> None:
         portal.on("GET", path, redirect("/login"))
 
 
-async def test_login_success_and_read_account(portal: FakePortal, client: MDUClient) -> None:
+async def test_login_success_and_read_account(
+    portal: FakePortal, client: MDUClient
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", redirect("/account/load"))
     portal.on("GET", "/account/load", html(load_fixture("app_page.html")))
-    portal.on("GET", "/account/load-accounts-list", as_json(load_fixture("accounts_list.json")))
+    portal.on(
+        "GET",
+        "/account/load-accounts-list",
+        as_json(load_fixture("accounts_list.json")),
+    )
     portal.on("POST", "/account/load-account", empty())
     portal.on("GET", "/payment-center", html(load_fixture("app_page.html")))
     portal.on("GET", "/session/user", as_json(load_fixture("session_user.json")))
@@ -62,7 +71,11 @@ async def test_login_success_and_read_account(portal: FakePortal, client: MDUCli
 
     await client.login()
     login = portal.sent("POST", "/login")[0]
-    assert login.form == {"username": "donavan", "password": "hunter2", "_csrf": "csrf-login-token"}
+    assert login.form == {
+        "username": "donavan",
+        "password": "hunter2",
+        "_csrf": "csrf-login-token",
+    }
     # The session cookie goes back exactly as set, not wrapped in quotes.
     assert f"{SESSION_COOKIE[0]}={SESSION_COOKIE[1]}" in login.headers["Cookie"]
     assert login.headers["X-CSRF-TOKEN"] == "csrf-login-token"
@@ -98,7 +111,12 @@ async def test_login_mfa_flow(portal: FakePortal, client: MDUClient) -> None:
     portal.on(
         "GET",
         "/mfa/contact-details",
-        as_json({"status": "OK", "object": {"emails": ["d@example.com"], "phones": ["7015551234"]}}),
+        as_json(
+            {
+                "status": "OK",
+                "object": {"emails": ["d@example.com"], "phones": ["7015551234"]},
+            }
+        ),
     )
     portal.on("POST", "/mfa/initiate", as_json({"status": "OK", "object": True}))
     portal.on("POST", "/mfa/verify", as_json(0))
@@ -120,8 +138,13 @@ async def test_login_mfa_flow(portal: FakePortal, client: MDUClient) -> None:
     assert portal.sent("GET", "/mfa/continue")
 
 
-@pytest.mark.parametrize(("answer", "reason"), [(1, "invalid_code"), (-2, "code_expired"), (3, "too_many_attempts")])
-async def test_mfa_verify_rejected(portal: FakePortal, client: MDUClient, answer: int, reason: str) -> None:
+@pytest.mark.parametrize(
+    ("answer", "reason"),
+    [(1, "invalid_code"), (-2, "code_expired"), (3, "too_many_attempts")],
+)
+async def test_mfa_verify_rejected(
+    portal: FakePortal, client: MDUClient, answer: int, reason: str
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", redirect("/mfa"))
     portal.on("GET", "/mfa", html(load_fixture("mfa_page.html")))
@@ -133,14 +156,18 @@ async def test_mfa_verify_rejected(portal: FakePortal, client: MDUClient, answer
     assert err.value.reason == reason
 
 
-async def test_session_expired_is_detected(portal: FakePortal, client: MDUClient) -> None:
+async def test_session_expired_is_detected(
+    portal: FakePortal, client: MDUClient
+) -> None:
     portal.on("GET", "/session/user", redirect("/login"))
     _login_page(portal)
     with pytest.raises(MDUSessionExpired):
         await client.get_account()
 
 
-async def test_empty_session_user_means_signed_out(portal: FakePortal, client: MDUClient) -> None:
+async def test_empty_session_user_means_signed_out(
+    portal: FakePortal, client: MDUClient
+) -> None:
     portal.on("GET", "/session/user", empty())
     with pytest.raises(MDUSessionExpired):
         await client.get_account()
@@ -150,7 +177,11 @@ async def test_mfa_page_served_at_login(portal: FakePortal, client: MDUClient) -
     """A code page answered at /login itself is not a bad password."""
     _login_page(portal)
     portal.on("POST", "/login", html(load_fixture("mfa_page.html")))
-    portal.on("GET", "/mfa/contact-details", as_json({"status": "OK", "object": {"emails": ["d@x.com"], "phones": []}}))
+    portal.on(
+        "GET",
+        "/mfa/contact-details",
+        as_json({"status": "OK", "object": {"emails": ["d@x.com"], "phones": []}}),
+    )
     with pytest.raises(MDUMfaRequired):
         await client.login()
     assert await client.mfa_contacts() == ["d@x.com"]
@@ -166,15 +197,23 @@ async def test_mfa_detected_by_endpoint(portal: FakePortal, client: MDUClient) -
         await client.login()
 
 
-async def test_login_success_detected_by_accounts(portal: FakePortal, client: MDUClient) -> None:
+async def test_login_success_detected_by_accounts(
+    portal: FakePortal, client: MDUClient
+) -> None:
     """Landing on /login is fine if the account list loads."""
     _login_page(portal)
     portal.on("POST", "/login", html(load_fixture("login.html")))
-    portal.on("GET", "/account/load-accounts-list", as_json(load_fixture("accounts_list.json")))
+    portal.on(
+        "GET",
+        "/account/load-accounts-list",
+        as_json(load_fixture("accounts_list.json")),
+    )
     await client.login()
 
 
-async def test_unexpected_page_is_not_bad_password(portal: FakePortal, client: MDUClient) -> None:
+async def test_unexpected_page_is_not_bad_password(
+    portal: FakePortal, client: MDUClient
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", html("<html><body>Maintenance</body></html>"))
     portal.on("GET", "/", html("<html><body>Maintenance</body></html>"))
@@ -184,7 +223,9 @@ async def test_unexpected_page_is_not_bad_password(portal: FakePortal, client: M
     assert "Maintenance" in str(err.value)
 
 
-async def test_empty_answer_with_refresh_leads_to_code_page(portal: FakePortal, client: MDUClient) -> None:
+async def test_empty_answer_with_refresh_leads_to_code_page(
+    portal: FakePortal, client: MDUClient
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", empty(Refresh="0; url=/mfa"))
     _not_signed_in(portal)
@@ -193,7 +234,9 @@ async def test_empty_answer_with_refresh_leads_to_code_page(portal: FakePortal, 
         await client.login()
 
 
-async def test_empty_answer_then_signed_in(portal: FakePortal, client: MDUClient) -> None:
+async def test_empty_answer_then_signed_in(
+    portal: FakePortal, client: MDUClient
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", empty())
     portal.on("GET", "/mfa/enabled", redirect("/login"))
@@ -209,7 +252,9 @@ async def test_empty_answer_then_signed_in(portal: FakePortal, client: MDUClient
     await client.login()
 
 
-async def test_empty_answer_then_sign_in_form_is_bad_password(portal: FakePortal, client: MDUClient) -> None:
+async def test_empty_answer_then_sign_in_form_is_bad_password(
+    portal: FakePortal, client: MDUClient
+) -> None:
     _login_page(portal)
     portal.on("POST", "/login", empty())
     _not_signed_in(portal)
@@ -220,7 +265,15 @@ async def test_empty_answer_then_sign_in_form_is_bad_password(portal: FakePortal
 
 async def test_trusted_cookies_round_trip(client: MDUClient) -> None:
     client.import_trusted_cookies(
-        {"TRUSTED_DEVICE": {"value": "abc123", "domain": "", "path": "/", "max-age": "7776000", "secure": False}}
+        {
+            "TRUSTED_DEVICE": {
+                "value": "abc123",
+                "domain": "",
+                "path": "/",
+                "max-age": "7776000",
+                "secure": False,
+            }
+        }
     )
     assert client.export_trusted_cookies()["TRUSTED_DEVICE"]["value"] == "abc123"
     client.clear_session()
@@ -228,18 +281,28 @@ async def test_trusted_cookies_round_trip(client: MDUClient) -> None:
 
 
 async def test_mfa_token_kept_without_expiry(client: MDUClient) -> None:
-    client.import_trusted_cookies({"mfa-token": {"value": "tok", "domain": "", "path": "/"}})
+    client.import_trusted_cookies(
+        {"mfa-token": {"value": "tok", "domain": "", "path": "/"}}
+    )
     client.clear_session()
     assert client.export_trusted_cookies()["mfa-token"]["value"] == "tok"
 
 
-async def test_trusted_cookie_is_sent_on_sign_in(portal: FakePortal, client: MDUClient) -> None:
+async def test_trusted_cookie_is_sent_on_sign_in(
+    portal: FakePortal, client: MDUClient
+) -> None:
     """A saved trust cookie goes out with the sign-in, so MDU can skip the code."""
-    client.import_trusted_cookies({"mfa-token": {"value": "tok|123-abc", "domain": "", "path": "/"}})
+    client.import_trusted_cookies(
+        {"mfa-token": {"value": "tok|123-abc", "domain": "", "path": "/"}}
+    )
     _login_page(portal)
     portal.on("POST", "/login", redirect("/account/load"))
     portal.on("GET", "/account/load", html(load_fixture("app_page.html")))
-    portal.on("GET", "/account/load-accounts-list", as_json(load_fixture("accounts_list.json")))
+    portal.on(
+        "GET",
+        "/account/load-accounts-list",
+        as_json(load_fixture("accounts_list.json")),
+    )
     await client.login()
     assert "mfa-token=tok|123-abc" in portal.sent("POST", "/login")[0].headers["Cookie"]
 
@@ -247,7 +310,13 @@ async def test_trusted_cookie_is_sent_on_sign_in(portal: FakePortal, client: MDU
 def test_summarize_headers_hides_cookie_values() -> None:
     from custom_components.mdu.api import summarize_headers
 
-    summary = summarize_headers({"Set-Cookie": "JSESSIONID=secret; Path=/", "Content-Length": "0", "X-Thing": "v"})
+    summary = summarize_headers(
+        {
+            "Set-Cookie": "JSESSIONID=secret; Path=/",
+            "Content-Length": "0",
+            "X-Thing": "v",
+        }
+    )
     assert summary == "set-cookie JSESSIONID, content-length=0, x-thing"
     assert "secret" not in summary
 
@@ -259,7 +328,9 @@ def test_describe_page() -> None:
         "<html><head><title>Request Rejected</title><script>var x=1;</script></head>"
         "<body><h1>The requested URL was rejected.</h1><p>{{ strings.x }}</p></body></html>"
     )
-    assert describe_page(html_page) == '"Request Rejected" The requested URL was rejected.'
+    assert (
+        describe_page(html_page) == '"Request Rejected" The requested URL was rejected.'
+    )
     assert describe_page("") == "(no text, 0 bytes)"
 
 
@@ -272,12 +343,20 @@ async def test_create_client_does_not_quote_cookies(hass) -> None:
     client = create_client(hass, {"username": "u", "password": "p"}, auto_cleanup=False)
     assert re.match(r"https://", client.base_url)
     url = aiohttp.client.URL(BASE)
-    client._session.cookie_jar.update_cookies(SimpleCookie("SESSION=YmFkZjAwZA==; Path=/"), url)
-    assert client._session.cookie_jar.filter_cookies(url)["SESSION"].coded_value == "YmFkZjAwZA=="
+    client._session.cookie_jar.update_cookies(
+        SimpleCookie("SESSION=YmFkZjAwZA==; Path=/"), url
+    )
+    assert (
+        client._session.cookie_jar.filter_cookies(url)["SESSION"].coded_value
+        == "YmFkZjAwZA=="
+    )
     await client.close()
 
 
 def test_address_parts_are_trimmed() -> None:
     from custom_components.mdu.api import _address
 
-    assert _address({"street": "123 MAIN ST      ", "city": "BISMARCK  ", "state": "ND"}) == "123 MAIN ST, BISMARCK, ND"
+    assert (
+        _address({"street": "123 MAIN ST      ", "city": "BISMARCK  ", "state": "ND"})
+        == "123 MAIN ST, BISMARCK, ND"
+    )

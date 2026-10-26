@@ -1,4 +1,5 @@
 """Sensors for Montana-Dakota Utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -103,7 +104,9 @@ async def async_setup_entry(
     histories = list(coordinator.data.usage.values())
     for history in histories:
         same_kind = [h for h in histories if h.is_gas == history.is_gas]
-        entities.append(MDUUsageSensor(coordinator, history, numbered=len(same_kind) > 1))
+        entities.append(
+            MDUUsageSensor(coordinator, history, numbered=len(same_kind) > 1)
+        )
 
     async_add_entities(entities)
 
@@ -113,7 +116,9 @@ class MDUAccountSensor(MDUEntity, SensorEntity):
 
     entity_description: MDUAccountSensorDescription
 
-    def __init__(self, coordinator: MDUCoordinator, description: MDUAccountSensorDescription) -> None:
+    def __init__(
+        self, coordinator: MDUCoordinator, description: MDUAccountSensorDescription
+    ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.account_id}_{description.key}"
@@ -125,7 +130,10 @@ class MDUAccountSensor(MDUEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         attrs: dict[str, Any] = {ATTR_ACCOUNT_ID: self.coordinator.account_id}
-        if self.entity_description.key == "last_bill_amount" and self.coordinator.data.account.bills:
+        if (
+            self.entity_description.key == "last_bill_amount"
+            and self.coordinator.data.account.bills
+        ):
             attrs["statistic_id"] = cost_statistic_id(self.coordinator.account_id)
         return attrs
 
@@ -137,7 +145,9 @@ class MDUUsageSensor(MDUEntity, SensorEntity):
     in its attributes, which holds every billed month, not this sensor.
     """
 
-    def __init__(self, coordinator: MDUCoordinator, history: UsageHistory, numbered: bool) -> None:
+    def __init__(
+        self, coordinator: MDUCoordinator, history: UsageHistory, numbered: bool
+    ) -> None:
         super().__init__(coordinator)
         sa = history.service_agreement
         self._key = sa.key

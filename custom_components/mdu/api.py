@@ -26,11 +26,11 @@ Endpoints and payloads were read from the portal's public bundles
 fields the bundles don't pin down (date formats, the ``month`` label) are
 parsed leniently.
 """
+
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from http.cookies import Morsel
 import json
 import logging
@@ -41,13 +41,7 @@ from urllib.parse import urljoin
 import aiohttp
 from yarl import URL
 
-from .const import (
-    DEFAULT_HOST,
-    REQUEST_TIMEOUT,
-    UNIT_DEKATHERM,
-    UNIT_KWH,
-    UNIT_THERM,
-)
+from .const import DEFAULT_HOST, REQUEST_TIMEOUT, UNIT_DEKATHERM, UNIT_KWH, UNIT_THERM
 from .exceptions import (
     MDUAuthenticationError,
     MDUConnectionError,
@@ -71,7 +65,20 @@ _CSRF_HEADER_RE = re.compile(
 _MONTHS = {
     name: index
     for index, name in enumerate(
-        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"],
+        [
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "may",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "oct",
+            "nov",
+            "dec",
+        ],
         start=1,
     )
 }
@@ -158,7 +165,9 @@ class MDUAccount:
     @property
     def last_payment(self) -> Payment | None:
         """The latest completed payment, or the latest payment of any kind."""
-        completed = [p for p in self.payments if (p.status or "").upper().startswith("C")]
+        completed = [
+            p for p in self.payments if (p.status or "").upper().startswith("C")
+        ]
         candidates = completed or self.payments
         return candidates[-1] if candidates else None
 
@@ -251,7 +260,7 @@ class MDUClient:
                 hops = [f"{r.status} {r.url.path}" for r in resp.history]
                 headers = summarize_headers(resp.headers)
                 onward = _onward_url(resp.headers)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise MDUConnectionError(f"Sign-in request failed: {err}") from err
 
         _LOGGER.debug(
@@ -270,7 +279,11 @@ class MDUClient:
         # load the next page; do the same once and look again.
         next_url = urljoin(str(final), onward) if onward else f"{self.base_url}/"
         next_final, next_html = await self._get_page(next_url)
-        _LOGGER.debug("Followed sign-in to %s; page: %s", next_final.path, describe_page(next_html))
+        _LOGGER.debug(
+            "Followed sign-in to %s; page: %s",
+            next_final.path,
+            describe_page(next_html),
+        )
         if await self._classify_sign_in(next_final, next_html, allow_bad_password=True):
             return
 
@@ -280,7 +293,9 @@ class MDUClient:
             f"then {next_final.path}: {describe_page(next_html)})"
         )
 
-    async def _classify_sign_in(self, final: URL, html: str, allow_bad_password: bool = False) -> bool:
+    async def _classify_sign_in(
+        self, final: URL, html: str, allow_bad_password: bool = False
+    ) -> bool:
         """Decide what a page after signing in means.
 
         Returns True when signed in, raises MDUMfaRequired or
@@ -306,7 +321,9 @@ class MDUClient:
             self._mfa_page = str(final)
             raise MDUMfaRequired("MDU asked for a security code")
 
-        if "error" in final.query or (has_login_form and (allow_bad_password or path == "/login")):
+        if "error" in final.query or (
+            has_login_form and (allow_bad_password or path == "/login")
+        ):
             raise MDUAuthenticationError("MDU rejected the username or password")
         return False
 
@@ -347,9 +364,13 @@ class MDUClient:
         try:
             result = int(result)
         except (TypeError, ValueError) as err:
-            raise MDUMfaError(f"Unexpected answer to the security code: {result!r}", "cannot_connect") from err
+            raise MDUMfaError(
+                f"Unexpected answer to the security code: {result!r}", "cannot_connect"
+            ) from err
         if result != 0:
-            message, reason = _MFA_VERIFY_ERRORS.get(result, ("Incorrect security code", "invalid_code"))
+            message, reason = _MFA_VERIFY_ERRORS.get(
+                result, ("Incorrect security code", "invalid_code")
+            )
             raise MDUMfaError(message, reason)
 
         _, html = await self._get_page("/mfa/continue")
@@ -419,7 +440,7 @@ class MDUClient:
                 timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
             ):
                 pass
-        except (aiohttp.ClientError, asyncio.TimeoutError):
+        except (TimeoutError, aiohttp.ClientError):
             pass
         self._csrf = None
         self._account_id = None
@@ -438,8 +459,10 @@ class MDUClient:
         for key, item in pairs:
             if isinstance(item, dict):
                 account_id = str(item.get("accountId") or item.get("id") or key)
-                label = item.get("accountDescription") or item.get("description") or _address(
-                    item.get("serviceAddress") or item.get("address")
+                label = (
+                    item.get("accountDescription")
+                    or item.get("description")
+                    or _address(item.get("serviceAddress") or item.get("address"))
                 )
             else:
                 account_id, label = str(key), str(item)
@@ -471,7 +494,9 @@ class MDUClient:
             raise MDUConnectionError("The portal returned no selected account")
         return parse_account(selected)
 
-    async def get_usage(self, agreement: ServiceAgreement, today: date | None = None) -> UsageHistory | None:
+    async def get_usage(
+        self, agreement: ServiceAgreement, today: date | None = None
+    ) -> UsageHistory | None:
         """Return monthly usage for one service agreement, or None if it has none."""
         data = await self._json(
             "POST",
@@ -503,7 +528,7 @@ class MDUClient:
                 if resp.status >= 400:
                     raise MDUConnectionError(f"GET {path} returned HTTP {resp.status}")
                 return resp.url, await resp.text()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise MDUConnectionError(f"GET {path} failed: {err}") from err
 
     async def _probe_json(self, path: str) -> Any:
@@ -521,7 +546,7 @@ class MDUClient:
                 if resp.status != 200:
                     return None
                 text = await resp.text()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise MDUConnectionError(f"GET {path} failed: {err}") from err
         try:
             return json.loads(text) if text.strip() else None
@@ -530,8 +555,12 @@ class MDUClient:
 
     async def _mfa_call(self, method: str, path: str, **kwargs: Any) -> Any:
         if not self._mfa_page:
-            raise MDUMfaError("Sign in before asking for a security code", "cannot_connect")
-        return await self._request(method, urljoin(self._mfa_page, path), parse_json=True, **kwargs)
+            raise MDUMfaError(
+                "Sign in before asking for a security code", "cannot_connect"
+            )
+        return await self._request(
+            method, urljoin(self._mfa_page, path), parse_json=True, **kwargs
+        )
 
     async def _json(self, method: str, path: str, **kwargs: Any) -> Any:
         return await self._request(method, path, parse_json=True, **kwargs)
@@ -567,11 +596,16 @@ class MDUClient:
                 **kwargs,
             ) as resp:
                 text = await resp.text()
-                if resp.url.path.rstrip("/").lower() == "/login" or resp.status in (401, 403):
+                if resp.url.path.rstrip("/").lower() == "/login" or resp.status in (
+                    401,
+                    403,
+                ):
                     raise MDUSessionExpired(f"{method} {path}: not signed in")
                 if resp.status >= 400:
-                    raise MDUConnectionError(f"{method} {path} returned HTTP {resp.status}")
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+                    raise MDUConnectionError(
+                        f"{method} {path} returned HTTP {resp.status}"
+                    )
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise MDUConnectionError(f"{method} {path} failed: {err}") from err
 
         if not parse_json:
@@ -581,7 +615,9 @@ class MDUClient:
         except ValueError as err:
             # An HTML page instead of JSON means the session went away.
             if "<html" in text[:500].lower():
-                raise MDUSessionExpired(f"{method} {path}: got a page instead of data") from err
+                raise MDUSessionExpired(
+                    f"{method} {path}: got a page instead of data"
+                ) from err
             raise MDUConnectionError(f"{method} {path} returned invalid JSON") from err
 
 
@@ -603,7 +639,14 @@ def describe_page(html: str, limit: int = 200) -> str:
     return f"{head}{text[:limit]}{'…' if len(text) > limit else ''}"
 
 
-_HEADERS_WITH_VALUES = ("content-type", "content-length", "location", "refresh", "x-frame-options", "server")
+_HEADERS_WITH_VALUES = (
+    "content-type",
+    "content-length",
+    "location",
+    "refresh",
+    "x-frame-options",
+    "server",
+)
 
 
 def summarize_headers(headers: Any) -> str:
@@ -676,7 +719,11 @@ def parse_account(selected: dict[str, Any]) -> MDUAccount:
     for raw in selected.get("payments") or []:
         if isinstance(raw, dict) and (paid := parse_date(raw.get("paymentDate"))):
             payments.append(
-                Payment(payment_date=paid, amount=parse_money(raw.get("paymentAmount")), status=raw.get("paymentStatus"))
+                Payment(
+                    payment_date=paid,
+                    amount=parse_money(raw.get("paymentAmount")),
+                    status=raw.get("paymentStatus"),
+                )
             )
     payments.sort(key=lambda p: p.payment_date)
 
@@ -723,7 +770,9 @@ def _is_active(active: Any, status: str | None) -> bool:
     return not (status or "").lower().startswith(("c", "stop", "inact"))
 
 
-def parse_usage(agreement: ServiceAgreement, obj: dict[str, Any], today: date) -> UsageHistory:
+def parse_usage(
+    agreement: ServiceAgreement, obj: dict[str, Any], today: date
+) -> UsageHistory:
     """Build a UsageHistory from a ``/usage-history`` response object.
 
     Each chart row holds one calendar month with this year's (``tyTherms``)
@@ -740,13 +789,21 @@ def parse_usage(agreement: ServiceAgreement, obj: dict[str, Any], today: date) -
         if parsed is None:
             continue
         month, year = parsed
-        rows.append((month, year, parse_number(row.get("tyTherms")), parse_number(row.get("lyTherms"))))
+        rows.append(
+            (
+                month,
+                year,
+                parse_number(row.get("tyTherms")),
+                parse_number(row.get("lyTherms")),
+            )
+        )
 
     # Rows without a year: if "this year" has figures for months later than
     # the current one, the chart is a rolling 12 months (those months are
     # last year's); otherwise it is the calendar year with the future empty.
     rolling = any(
-        year is None and month > today.month and (ty or 0) > 0 for month, year, ty, _ in rows
+        year is None and month > today.month and (ty or 0) > 0
+        for month, year, ty, _ in rows
     )
 
     values: dict[date, float] = {}
@@ -806,7 +863,7 @@ def parse_date(value: Any) -> date | None:
     if isinstance(value, (int, float)):
         # Java epoch milliseconds
         seconds = value / 1000 if value > 10**11 else value
-        return datetime.fromtimestamp(seconds, tz=timezone.utc).date()
+        return datetime.fromtimestamp(seconds, tz=UTC).date()
     text = str(value).strip()
     if text.isdigit():
         return parse_date(int(text))
@@ -857,7 +914,15 @@ def _address(value: Any) -> str | None:
                 return value[key].strip()
         parts = [
             str(value[k]).strip()
-            for k in ("address1", "addressLine1", "street", "city", "state", "postal", "zip")
+            for k in (
+                "address1",
+                "addressLine1",
+                "street",
+                "city",
+                "state",
+                "postal",
+                "zip",
+            )
             if value.get(k) and str(value[k]).strip()
         ]
         return ", ".join(parts) or None

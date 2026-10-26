@@ -1,4 +1,5 @@
 """Tests for parsing portal responses."""
+
 from datetime import date
 
 import pytest
@@ -29,13 +30,20 @@ def test_parse_account() -> None:
     assert account.amount_due == 48.75
     assert account.last_bill_date == date(2026, 9, 10)
     assert account.due_date == date(2026, 10, 2)
-    assert [b.bill_date for b in account.bills] == [date(2026, 8, 12), date(2026, 9, 10)]
+    assert [b.bill_date for b in account.bills] == [
+        date(2026, 8, 12),
+        date(2026, 9, 10),
+    ]
     # The latest completed payment, not the pending one.
     assert account.last_payment.amount == 48.75
     assert account.last_payment.payment_date == date(2026, 10, 1)
     assert account.autopay is True
     assert account.budget_pay is False
-    assert [sa.sa_id for sa in account.service_agreements] == ["5550001", "5550002", "5550003"]
+    assert [sa.sa_id for sa in account.service_agreements] == [
+        "5550001",
+        "5550002",
+        "5550003",
+    ]
     assert [sa.active for sa in account.service_agreements] == [True, True, False]
     assert account.service_agreements[0].premise_id == "7770001"
     assert account.service_agreements[0].address == "123 MAIN ST, BISMARCK, ND, 58501"
@@ -44,7 +52,13 @@ def test_parse_account() -> None:
 
 @pytest.mark.parametrize(
     ("active", "status", "expected"),
-    [(True, "Closed", True), (None, "Closed", False), (None, "Stopped", False), (None, "Active", True), (None, None, True)],
+    [
+        (True, "Closed", True),
+        (None, "Closed", False),
+        (None, "Stopped", False),
+        (None, "Active", True),
+        (None, None, True),
+    ],
 )
 def test_service_active(active, status, expected) -> None:
     from custom_components.mdu.api import _is_active
@@ -143,7 +157,13 @@ def test_parse_date(value, expected) -> None:
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("$1,234.50", 1234.5), ("45.10CR", -45.1), ("(12.00)", -12.0), (99, 99.0), (None, None)],
+    [
+        ("$1,234.50", 1234.5),
+        ("45.10CR", -45.1),
+        ("(12.00)", -12.0),
+        (99, 99.0),
+        (None, None),
+    ],
 )
 def test_parse_money(value, expected) -> None:
     assert parse_money(value) == expected
