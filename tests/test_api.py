@@ -37,7 +37,7 @@ async def client(portal: FakePortal):
     session = aiohttp.ClientSession(
         cookie_jar=aiohttp.CookieJar(unsafe=True, quote_cookie=False)
     )
-    client = MDUClient(session, "donavan", "hunter2")
+    client = MDUClient(session, "someone", "hunter2")
     client.base_url = portal.url
     yield client
     await session.close()
@@ -72,7 +72,7 @@ async def test_login_success_and_read_account(
     await client.login()
     login = portal.sent("POST", "/login")[0]
     assert login.form == {
-        "username": "donavan",
+        "username": "someone",
         "password": "hunter2",
         "_csrf": "csrf-login-token",
     }

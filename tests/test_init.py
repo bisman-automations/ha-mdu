@@ -30,7 +30,7 @@ def entry(hass: HomeAssistant) -> MockConfigEntry:
         unique_id="1234567890",
         title="MDU 1234567890 – Home",
         data={
-            "username": "donavan",
+            "username": "someone",
             "password": "hunter2",
             "account_id": "1234567890",
             "trusted_cookies": {},
@@ -163,7 +163,7 @@ async def test_diagnostics_are_redacted(
     await hass.async_block_till_done()
     result = await async_get_config_entry_diagnostics(hass, entry)
     text = json.dumps(result)  # must be plain JSON
-    for secret in ("hunter2", "donavan", "1234567890", "5550001", "7770001", "MAIN ST"):
+    for secret in ("hunter2", "someone", "1234567890", "5550001", "7770001", "MAIN ST"):
         assert secret not in text
     assert result["account"]["bills"][-1]["amount"] == 48.75
     assert result["account"]["bills"][-1]["bill_date"] == "2026-09-10"

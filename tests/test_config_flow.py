@@ -57,7 +57,7 @@ async def _start(hass: HomeAssistant) -> dict:
     )
     assert result["type"] is FlowResultType.FORM
     return await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"username": "donavan", "password": "hunter2"}
+        result["flow_id"], {"username": "someone", "password": "hunter2"}
     )
 
 
@@ -67,7 +67,7 @@ async def test_single_account_no_mfa(hass: HomeAssistant, client: MagicMock) -> 
     assert result["title"] == "MDU 1234567890 – Home"
     assert result["result"].unique_id == "1234567890"
     assert result["data"] == {
-        "username": "donavan",
+        "username": "someone",
         "password": "hunter2",
         "account_id": "1234567890",
         "trusted_cookies": COOKIES,
@@ -137,7 +137,7 @@ async def test_reauth_with_mfa(hass: HomeAssistant, client: MagicMock) -> None:
         domain=DOMAIN,
         unique_id="1234567890",
         data={
-            "username": "donavan",
+            "username": "someone",
             "password": "old",
             "account_id": "1234567890",
             "trusted_cookies": {},
@@ -166,5 +166,64 @@ async def test_reauth_with_mfa(hass: HomeAssistant, client: MagicMock) -> None:
 
 
 def test_mask_contact() -> None:
-    assert mask_contact("donavan@example.com") == "d******@example.com"
+    assert mask_contact("someone@example.com") == "s******@example.com"
     assert mask_contact("7015551234") == "(***) ***-1234"
+
+
+def _entry() -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="1234567890",
+        data={
+            "username": "someone",
+            "password": "old",
+            "account_id": "1234567890",
+            "trusted_cookies": {"kept": "1"},
+        },
+    )
+
+
+async def test_reconfigure_changes_the_sign_in(
+    hass: HomeAssistant, client: MagicMock
+) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["step_id"] == "reconfigure"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": " new-login ", "password": "new"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["username"] == "new-login"
+    assert entry.data["password"] == "new"
+    assert entry.data["account_id"] == "1234567890"
+
+
+async def test_reconfigure_must_reach_the_same_account(
+    hass: HomeAssistant, client: MagicMock
+) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    client.get_accounts.return_value = {"999": "Someone else"}
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "other", "password": "x"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "account_missing"
+    assert entry.data["username"] == "someone"
+
+
+async def test_reconfigure_bad_password_shows_an_error(
+    hass: HomeAssistant, client: MagicMock
+) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    client.login.side_effect = MDUAuthenticationError("no")
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "someone", "password": "wrong"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_auth"}

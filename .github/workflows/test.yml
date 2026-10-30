@@ -26,5 +26,3 @@ concurrency:
 jobs:
   test:
     uses: bisman-automations/.github/.github/workflows/ha-test.yml@main
-    with:
-      python-min: "3.13"

@@ -8,7 +8,7 @@
 # Montana-Dakota Utilities for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11%2B-blue.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.8%2B-blue.svg)](https://www.home-assistant.io/)
 [![GitHub Release](https://img.shields.io/github/v/release/bisman-automations/ha-mdu)](https://github.com/bisman-automations/ha-mdu/releases)
 [![Test](https://github.com/bisman-automations/ha-mdu/actions/workflows/test.yml/badge.svg)](https://github.com/bisman-automations/ha-mdu/actions/workflows/test.yml)
 [![Validate](https://github.com/bisman-automations/ha-mdu/actions/workflows/validate.yml/badge.svg)](https://github.com/bisman-automations/ha-mdu/actions/workflows/validate.yml)
@@ -68,7 +68,7 @@ Usage covers every billed month MDU shows (about two years). Bills cover the who
 1. Click the button above, or in HACS open the menu, choose **Custom repositories**, and add `https://github.com/bisman-automations/ha-mdu` as an **Integration**.
 2. Download **Montana-Dakota Utilities** and restart Home Assistant.
 
-Requires **Home Assistant 2025.11 or newer**.
+Requires **Home Assistant 2026.8 or newer**.
 
 ### Manual
 
@@ -83,7 +83,9 @@ Download `mdu.zip` from the [latest release](https://github.com/bisman-automatio
 3. If your login has multi-factor authentication turned on, choose where MDU should send the security code, then enter the 5-digit code. Home Assistant asks MDU to trust this connection, so you normally won't be asked again.
 4. If your login has more than one account, pick the account. Add the integration again for each other account.
 
-If your password changes, or MDU stops trusting the connection, Home Assistant shows a **Reconfigure** prompt asking you to sign in again (with a new security code if MDU wants one).
+If your password changes, or MDU stops trusting the connection, Home Assistant asks you to sign in again (with a new security code if MDU wants one).
+
+To change the username or password yourself, open **Settings → Devices & services → Montana-Dakota Utilities**, choose **⋮ → Reconfigure** on the account, and sign in. The new sign-in must still reach the same MDU account; your sensors and Energy dashboard history stay as they are.
 
 ## 📊 Energy Dashboard Integration
 
@@ -164,7 +166,7 @@ ruff check . && ruff format --check .
 pytest
 ```
 
-To test against the oldest supported Home Assistant (2025.11), use Python 3.13 and
+To test against the oldest supported Home Assistant (2026.8), use Python 3.14 and
 `pip install -r requirements_test_min.txt` instead.
 
 CI runs the same checks on every push and pull request, on both Home Assistant

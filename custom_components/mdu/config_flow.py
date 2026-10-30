@@ -8,7 +8,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    SOURCE_RECONFIGURE,
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+)
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -112,6 +118,31 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the username or password; it must still reach the same account."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            self._username = user_input[CONF_USERNAME].strip()
+            self._password = user_input[CONF_PASSWORD]
+            result = await self._async_sign_in(errors)
+            if result is not None:
+                return result
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_USERNAME, default=self._username or entry.data[CONF_USERNAME]
+                ): str,
+                vol.Required(CONF_PASSWORD): PASSWORD_SELECTOR,
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure", data_schema=schema, errors=errors
+        )
+
     async def async_step_mfa_contact(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -194,16 +225,22 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._client is not None:
             self.hass.async_create_task(self._client.close())
 
+    def _existing_entry(self) -> ConfigEntry | None:
+        """The entry being signed in again or changed, if this isn't a new one."""
+        if self.source == SOURCE_REAUTH:
+            return self._get_reauth_entry()
+        if self.source == SOURCE_RECONFIGURE:
+            return self._get_reconfigure_entry()
+        return None
+
     def _new_client(self) -> MDUClient:
         # Imported here so tests can patch the client factory.
         from . import create_client
 
         data = {CONF_USERNAME: self._username, CONF_PASSWORD: self._password}
-        if self.source == SOURCE_REAUTH:
+        if (entry := self._existing_entry()) is not None:
             # Keep the trusted-device cookies, so MDU may skip the code.
-            data[CONF_TRUSTED_COOKIES] = self._get_reauth_entry().data.get(
-                CONF_TRUSTED_COOKIES
-            )
+            data[CONF_TRUSTED_COOKIES] = entry.data.get(CONF_TRUSTED_COOKIES)
         return create_client(self.hass, data, auto_cleanup=False)
 
     async def _async_sign_in(self, errors: dict[str, str]) -> ConfigFlowResult | None:
@@ -252,8 +289,8 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self._accounts:
             return self.async_abort(reason="no_accounts")
 
-        if self.source == SOURCE_REAUTH:
-            account_id = self._get_reauth_entry().data[CONF_ACCOUNT_ID]
+        if (entry := self._existing_entry()) is not None:
+            account_id = entry.data[CONF_ACCOUNT_ID]
             if account_id not in self._accounts:
                 return self.async_abort(reason="account_missing")
             return await self._async_finish(account_id)
@@ -274,11 +311,9 @@ class MDUConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_TRUSTED_COOKIES: cookies,
         }
         await self.async_set_unique_id(account_id)
-        if self.source == SOURCE_REAUTH:
+        if (entry := self._existing_entry()) is not None:
             self._abort_if_unique_id_mismatch(reason="account_missing")
-            return self.async_update_reload_and_abort(
-                self._get_reauth_entry(), data_updates=data
-            )
+            return self.async_update_reload_and_abort(entry, data_updates=data)
 
         self._abort_if_unique_id_configured()
         label = self._accounts.get(account_id, account_id)

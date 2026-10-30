@@ -17,6 +17,14 @@
           "password": "Password"
         }
       },
+      "reconfigure": {
+        "title": "Change the MDU sign-in",
+        "description": "Enter the username and password you use for MDU Online Account Services now. They must still reach the account this entry was set up with. If MDU asks for a security code, you'll be prompted next.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
       "mfa_contact": {
         "title": "Security code",
         "description": "MDU wants a security code to finish signing in. Choose where to send it. Home Assistant asks MDU to trust this connection, so you shouldn't be asked again unless MDU forgets it.",
@@ -54,7 +62,8 @@
       "already_configured": "This MDU account is already configured.",
       "no_accounts": "No accounts were found for this sign-in.",
       "account_missing": "The account this entry was set up with isn't available to this sign-in anymore.",
-      "reauth_successful": "Signed in to MDU again."
+      "reauth_successful": "Signed in to MDU again.",
+      "reconfigure_successful": "Saved the new MDU sign-in."
     }
   },
   "entity": {

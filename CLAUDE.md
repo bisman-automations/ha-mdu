@@ -5,7 +5,7 @@ custom integration that signs in to the Montana-Dakota Utilities customer
 portal and adds the account's balance, bills and natural gas usage to Home
 Assistant, including external statistics for the Energy dashboard.
 
-Oldest supported Home Assistant: `hacs.json` → `homeassistant` (2025.11.0).
+Oldest supported Home Assistant: `hacs.json` → `homeassistant` (2026.8.0).
 
 ## Layout
 
@@ -37,7 +37,7 @@ Oldest supported Home Assistant: `hacs.json` → `homeassistant` (2025.11.0).
 
 Run the shared checks at the end of this file, on the newest Home Assistant
 (`requirements_test.txt`, Python 3.14) and the oldest supported one
-(`requirements_test_min.txt`, Python 3.13). CI runs both.
+(`requirements_test_min.txt`, Python 3.14, Home Assistant 2026.8). CI runs both.
 
 `tests/portal.py` is a fake portal on a local aiohttp test server, so the
 client runs over real HTTP (cookies, redirects, headers) without mocking.
