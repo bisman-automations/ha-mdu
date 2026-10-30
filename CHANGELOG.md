@@ -5,10 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2] - 2026-10-26
+## [1.1.0] - 2026-10-30
+
+### Added
+
+- **Reconfigure** an account to change its MDU username or password. The new sign-in must still reach the same account, so your sensors and Energy dashboard history are kept.
 
 ### Changed
 
+- **Requires Home Assistant 2026.8 or newer.**
+- The integration icon has a dark-mode version.
 - The README follows the same layout as the other bisman-automations integrations: a button that opens it in HACS, a button that starts setup, and troubleshooting steps for debug logs and diagnostics.
 - The changelog no longer keeps an Unreleased section, and the agent notes follow the updated shared release rules.
 
@@ -126,7 +132,7 @@ First stable release, checked against a real MDU account.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
 
-[1.0.2]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.1...v1.0.2
+[1.1.0]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.5...v1.0.0
 [0.1.5]: https://github.com/bisman-automations/ha-mdu/compare/v0.1.4...v0.1.5
