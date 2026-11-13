@@ -126,7 +126,9 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
                 )
                 continue
             try:
-                history = await self.client.get_usage(agreement)
+                history = await self.client.get_usage(
+                    agreement, today=dt_util.now().date()
+                )
             except MDUError as err:
                 _LOGGER.warning(
                     "Could not read usage for service %s: %s", agreement.sa_id, err

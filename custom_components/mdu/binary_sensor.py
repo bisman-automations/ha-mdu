@@ -18,6 +18,9 @@ from .api import MDUAccount
 from .coordinator import MDUCoordinator
 from .entity import MDUEntity
 
+# Coordinator or push updates; nothing polls on its own.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class MDUBinarySensorDescription(BinarySensorEntityDescription):

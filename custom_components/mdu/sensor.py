@@ -30,6 +30,9 @@ from .const import (
 from .coordinator import MDUCoordinator, cost_statistic_id, statistic_id, to_native
 from .entity import MDUEntity
 
+# Coordinator or push updates; nothing polls on its own.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class MDUAccountSensorDescription(SensorEntityDescription):

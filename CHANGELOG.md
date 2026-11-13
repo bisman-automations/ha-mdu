@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-11-13
+
+### Fixed
+
+- **Today is Home Assistant's today.** Usage is read using Home Assistant's time zone instead of the computer's, so the current month is right near midnight.
+
+### Changed
+
+- **Smoother updates.** Each kind of entity now tells Home Assistant how many updates it can take at once, as Home Assistant recommends. Nothing changes in how anything looks or works.
+
 ## [1.1.2] - 2026-11-10
 
 ### Changed
@@ -145,6 +155,7 @@ First stable release, checked against a real MDU account.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
 
+[1.1.3]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/bisman-automations/ha-mdu/compare/v1.0.1...v1.1.0

@@ -57,7 +57,7 @@ def client():
     client.close = AsyncMock()
     client.select_account = AsyncMock()
     client.get_account = AsyncMock(return_value=account)
-    client.get_usage = AsyncMock(side_effect=lambda sa: usage[sa.sa_id])
+    client.get_usage = AsyncMock(side_effect=lambda sa, **_: usage[sa.sa_id])
     client.export_trusted_cookies = MagicMock(return_value={})
     with patch("custom_components.mdu.create_client", return_value=client):
         yield client
