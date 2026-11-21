@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-11-21
+
+### Changed
+
+- **Ruff 0.17.6.** Linting uses the current Ruff release. Nothing changes for you.
+
 ## [1.1.3] - 2026-11-13
 
 ### Fixed
@@ -155,6 +161,7 @@ First stable release, checked against a real MDU account.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
 
+[1.1.4]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.0...v1.1.1
