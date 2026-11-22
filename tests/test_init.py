@@ -198,3 +198,65 @@ async def test_unload(
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
     client.close.assert_awaited()
+
+
+async def test_usage_sensor_added_when_service_is_read_later(
+    hass: HomeAssistant, entry: MockConfigEntry, client: MagicMock
+) -> None:
+    """A service whose usage failed at setup gets its sensor once it's read."""
+    read = client.get_usage.side_effect
+
+    def gas_fails(sa, **kwargs):
+        if sa.sa_id == "5550002":
+            raise MDUConnectionError("busy")
+        return read(sa, **kwargs)
+
+    client.get_usage.side_effect = gas_fails
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.mdu_home_electric_usage_last_month")
+    assert hass.states.get("sensor.mdu_home_gas_usage_last_month") is None
+
+    client.get_usage.side_effect = read
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    gas = hass.states.get("sensor.mdu_home_gas_usage_last_month")
+    assert gas is not None
+    assert gas.attributes["source_value"] == 2.0
+    # The electric sensor isn't added twice.
+    assert len(hass.states.async_entity_ids("sensor")) == 9
+
+
+async def test_unchanged_refresh_skips_writes(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    client: MagicMock,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A refresh with the same figures rewrites no statistics or states."""
+    freezer.move_to("2026-10-09 12:00:00-05:00")
+    with patch(
+        "custom_components.mdu.coordinator.async_add_external_statistics"
+    ) as add_stats:
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        written = add_stats.call_count
+        assert written == 3  # electric, gas and bill cost
+        before = hass.states.get("sensor.mdu_home_account_balance").last_reported
+
+        freezer.tick(60)
+        await entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+        assert add_stats.call_count == written
+        assert (
+            hass.states.get("sensor.mdu_home_account_balance").last_reported == before
+        )
+
+        # New figures are written as before.
+        account = parse_account(load_fixture("session_user.json")["selectedAccount"])
+        account.account_balance = 12.5
+        client.get_account.return_value = account
+        await entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+        assert add_stats.call_count == written * 2
+        assert hass.states.get("sensor.mdu_home_account_balance").state == "12.5"

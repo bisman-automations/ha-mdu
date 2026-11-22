@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import MDUConfigEntry
@@ -100,18 +100,34 @@ async def async_setup_entry(
 ) -> None:
     """Set up MDU sensors."""
     coordinator = entry.runtime_data
-    entities: list[SensorEntity] = [
+    async_add_entities(
         MDUAccountSensor(coordinator, description) for description in ACCOUNT_SENSORS
-    ]
+    )
 
-    histories = list(coordinator.data.usage.values())
-    for history in histories:
-        same_kind = [h for h in histories if h.is_gas == history.is_gas]
-        entities.append(
-            MDUUsageSensor(coordinator, history, numbered=len(same_kind) > 1)
-        )
+    known: set[str] = set()
 
-    async_add_entities(entities)
+    @callback
+    def add_usage_sensors() -> None:
+        """Add a usage sensor for each service not seen before.
+
+        A service whose usage couldn't be read at setup, or one added to the
+        account later, gets its sensor on the refresh that first reads it.
+        """
+        histories = list(coordinator.data.usage.values())
+        new = [h for h in histories if h.service_agreement.key not in known]
+        if not new:
+            return
+        entities = []
+        for history in new:
+            known.add(history.service_agreement.key)
+            same_kind = [h for h in histories if h.is_gas == history.is_gas]
+            entities.append(
+                MDUUsageSensor(coordinator, history, numbered=len(same_kind) > 1)
+            )
+        async_add_entities(entities)
+
+    add_usage_sensors()
+    entry.async_on_unload(coordinator.async_add_listener(add_usage_sensors))
 
 
 class MDUAccountSensor(MDUEntity, SensorEntity):

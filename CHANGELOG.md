@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-11-22
+
+### Fixed
+
+- **Usage sensors appear without a restart.** If MDU couldn't send a service's usage when Home Assistant started, or a new service is added to your account, its usage sensor now appears on the next update instead of only after a restart.
+
+### Changed
+
+- **Less work when nothing changed.** When an update brings back the same figures as the last one, the sensors and the Energy dashboard statistics are left as they are instead of being written again.
+
 ## [1.1.4] - 2026-11-21
 
 ### Changed
@@ -161,6 +171,7 @@ First stable release, checked against a real MDU account.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
 
+[1.1.5]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.1...v1.1.2

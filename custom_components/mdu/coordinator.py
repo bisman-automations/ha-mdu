@@ -87,6 +87,9 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
             config_entry=entry,
             name=f"{DOMAIN}_{entry.data[CONF_ACCOUNT_ID]}",
             update_interval=UPDATE_INTERVAL,
+            # MDUData compares by value: a refresh that brings back the same
+            # figures doesn't rewrite every entity's state.
+            always_update=False,
         )
         self.client = client
         self.account_id: str = entry.data[CONF_ACCOUNT_ID]
@@ -105,6 +108,10 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
             await self.client.logout()
 
         self._save_trusted_cookies()
+        if data == self.data:
+            # Same figures as the last refresh: the statistics already hold
+            # them, so skip reading and rewriting them.
+            return data
         for history in data.usage.values():
             await self._insert_usage_statistics(history)
         await self._insert_cost_statistics(data.account)
