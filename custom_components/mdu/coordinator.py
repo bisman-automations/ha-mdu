@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import (
@@ -20,16 +21,26 @@ from homeassistant.components.recorder.statistics import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import MDUAccount, MDUClient, UsageHistory
+from .api import (
+    Bill,
+    MDUAccount,
+    MDUClient,
+    MonthlyUsage,
+    Payment,
+    ServiceAgreement,
+    UsageHistory,
+)
 from .const import (
     CONF_ACCOUNT_ID,
     CONF_TRUSTED_COOKIES,
     DOMAIN,
     KWH_PER_DEKATHERM,
     KWH_PER_THERM,
+    RETRY_INTERVAL,
     UNIT_DEKATHERM,
     UNIT_KWH,
     UPDATE_INTERVAL,
@@ -40,6 +51,9 @@ _LOGGER = logging.getLogger(__name__)
 
 GJ_PER_KWH = 0.0036
 
+# The last figures read from the portal, kept so setup doesn't wait on it.
+CACHE_VERSION = 1
+
 
 @dataclass
 class MDUData:
@@ -47,6 +61,61 @@ class MDUData:
 
     account: MDUAccount
     usage: dict[str, UsageHistory] = field(default_factory=dict)
+
+
+def data_to_dict(data: MDUData) -> dict[str, Any]:
+    """Return MDUData as JSON-friendly values (dates as ISO strings)."""
+    return _jsonable(asdict(data))
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _jsonable(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, date):
+        return value.isoformat()
+    return value
+
+
+def _date(value: str | None) -> date | None:
+    return date.fromisoformat(value) if value else None
+
+
+def data_from_dict(raw: dict[str, Any]) -> MDUData:
+    """Rebuild MDUData from data_to_dict's output."""
+    account = dict(raw["account"])
+    account["bills"] = [
+        Bill(
+            **{
+                **bill,
+                "bill_date": _date(bill["bill_date"]),
+                "due_date": _date(bill.get("due_date")),
+            }
+        )
+        for bill in account.get("bills", [])
+    ]
+    account["payments"] = [
+        Payment(**{**payment, "payment_date": _date(payment["payment_date"])})
+        for payment in account.get("payments", [])
+    ]
+    account["service_agreements"] = [
+        ServiceAgreement(**agreement)
+        for agreement in account.get("service_agreements", [])
+    ]
+    usage = {}
+    for key, history in raw.get("usage", {}).items():
+        usage[key] = UsageHistory(
+            **{
+                **history,
+                "service_agreement": ServiceAgreement(**history["service_agreement"]),
+                "months": [
+                    MonthlyUsage(month=_date(m["month"]), value=m["value"])
+                    for m in history["months"]
+                ],
+            }
+        )
+    return MDUData(account=MDUAccount(**account), usage=usage)
 
 
 def to_native(history: UsageHistory, value: float) -> float:
@@ -93,6 +162,18 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
         )
         self.client = client
         self.account_id: str = entry.data[CONF_ACCOUNT_ID]
+        self._cache: Store[dict[str, Any]] = Store(
+            hass, CACHE_VERSION, f"{DOMAIN}.{entry.entry_id}"
+        )
+
+    async def async_load_cached(self) -> MDUData | None:
+        """Return the figures saved by the last successful refresh, if any."""
+        try:
+            raw = await self._cache.async_load()
+            return data_from_dict(raw) if raw else None
+        except Exception:  # noqa: BLE001 - an unreadable cache is just ignored
+            _LOGGER.debug("Ignoring the saved MDU figures", exc_info=True)
+            return None
 
     async def _async_update_data(self) -> MDUData:
         try:
@@ -103,10 +184,13 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
             # a security code.
             raise ConfigEntryAuthFailed(str(err)) from err
         except MDUError as err:
+            # Try again sooner than the usual twelve hours.
+            self.update_interval = RETRY_INTERVAL
             raise UpdateFailed(f"Error talking to MDU: {err}") from err
         finally:
             await self.client.logout()
 
+        self.update_interval = UPDATE_INTERVAL
         self._save_trusted_cookies()
         if data == self.data:
             # Same figures as the last refresh: the statistics already hold
@@ -115,6 +199,7 @@ class MDUCoordinator(DataUpdateCoordinator[MDUData]):
         for history in data.usage.values():
             await self._insert_usage_statistics(history)
         await self._insert_cost_statistics(data.account)
+        await self._cache.async_save(data_to_dict(data))
         return data
 
     async def _fetch(self) -> MDUData:

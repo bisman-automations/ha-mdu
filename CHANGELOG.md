@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-11-27
+
+### Changed
+
+- **Faster Home Assistant startup.** The latest figures from the portal are saved, so after a restart the sensors show them straight away and the integration checks the portal in the background instead of making Home Assistant wait. A rejected password still asks you to sign in again. The first setup works as before.
+- **Tries again sooner.** If the portal can't be reached, the next try is in 30 minutes instead of 12 hours.
+
 ## [1.1.5] - 2026-11-22
 
 ### Fixed
@@ -171,6 +178,7 @@ First stable release, checked against a real MDU account.
 - Monthly long-term statistics for each service, for the Energy dashboard.
 - Reauthentication when the password changes or MDU asks for a new code.
 
+[1.1.6]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/bisman-automations/ha-mdu/compare/v1.1.2...v1.1.3

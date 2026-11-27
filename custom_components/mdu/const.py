@@ -17,6 +17,8 @@ DEFAULT_HOST = "customer.montana-dakota.com"
 
 # MDU only publishes monthly figures, so there is no point polling often.
 UPDATE_INTERVAL = timedelta(hours=12)
+# After a failed refresh.
+RETRY_INTERVAL = timedelta(minutes=30)
 
 REQUEST_TIMEOUT = 30  # seconds
 

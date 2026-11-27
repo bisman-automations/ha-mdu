@@ -57,7 +57,8 @@ Usage covers every billed month MDU shows (about two years). Bills cover the who
 
 - **Monthly only.** MDU publishes usage per billing month, not hourly or daily, so the Energy dashboard shows one bar per month.
 - **Gas in GJ.** MDU bills Montana-Dakota and Great Plains gas in dekatherms (Dk). Home Assistant's gas device class only takes volume units, so gas is reported as energy in gigajoules. 1 Dk ≈ 1.055 GJ; the original Dk value is kept in the sensor attributes.
-- **Refreshes twice a day.** New bills appear after MDU posts them.
+- **Refreshes twice a day.** New bills appear after MDU posts them. If the portal can't be reached, it tries again after 30 minutes.
+- **Doesn't slow down startup.** After the first refresh, the latest figures are saved in Home Assistant, and later startups show them straight away while the integration checks the portal in the background.
 
 ## Installation
 
